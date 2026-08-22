@@ -26,11 +26,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # enablement: true turns Pages on for the repo if it is not already,
-      # so this workflow is the only step needed to go live.
+      # NOTE: Pages must be switched on once, by hand, before this can run:
+      #   Settings -> Pages -> Build and deployment -> Source: GitHub Actions
+      # The `enablement: true` option exists but cannot work here — creating a
+      # Pages site needs repository-admin rights, and the automatic
+      # GITHUB_TOKEN never has them ("Resource not accessible by integration").
+      # Once the switch is on, every push deploys with no further setup.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Strip files that do not belong on the site
         run: rm -rf .github .git

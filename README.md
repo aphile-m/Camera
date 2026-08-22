@@ -105,8 +105,17 @@ npx http-server -p 8000
 
 Then open `http://localhost:8000`.
 
-It is already deployed: every push to the default branch publishes to
-<https://aphile-m.github.io/Camera/> via `.github/workflows/pages.yml`.
+### Publishing
+
+`.github/workflows/pages.yml` deploys every push to the default branch.
+
+Pages has to be switched on once by hand first — GitHub never lets a workflow's
+own token create a Pages site, so this cannot be automated:
+
+**Settings → Pages → Build and deployment → Source: _GitHub Actions_**
+
+After that the workflow runs on its own and the site is at
+<https://aphile-m.github.io/Camera/>.
 
 It must be served over HTTP rather than opened as a `file://` URL, because it uses
 ES modules. Deploy by copying the directory to any static host — GitHub Pages,
