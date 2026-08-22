@@ -34,6 +34,11 @@ Consequences worth knowing:
 
 - Every user signs in as themselves. Files land in *their* drive with *their*
   permissions. The app cannot see anything the user cannot already see.
+- The client ID and tenant ID are committed to this repository. Both are public
+  identifiers that travel in the query string of every authorize request — they
+  are configuration, not credentials, and grant nobody anything without a
+  successful interactive sign-in. A *client secret* would be a different matter
+  entirely, which is exactly why a public client does not use one.
 - Because there is no server, tokens live in the browser. The refresh token is
   held in `localStorage`. Microsoft rotates SPA refresh tokens on every use and
   caps them at 24 hours, and the page ships a strict Content-Security-Policy
@@ -44,7 +49,25 @@ Consequences worth knowing:
 
 ---
 
-## One-time setup — about three minutes
+## Turning it on
+
+The build ships with an Entra registration already configured, so on any device:
+
+1. **Settings** → **SharePoint archive** → **Connect**
+2. Sign in with your Microsoft account
+3. **Test connection** — this creates the folder and confirms the whole chain:
+   token, drive, folder, write permission
+4. Turn on **Archive photographs to SharePoint**
+
+That is the whole thing. Archiving stays off until you flip that switch, and the
+settings are per-browser, so each device connects once.
+
+---
+
+## Using your own app registration instead
+
+Only needed if you are pointing this at a different tenant. Settings →
+SharePoint archive → **Use a different app registration** holds the fields.
 
 ### 1. Register the application
 
@@ -83,17 +106,11 @@ To write into a **SharePoint team site** library rather than your own OneDrive,
 use `Files.ReadWrite.All` or `Sites.ReadWrite.All` instead, and fill in the
 Drive ID field in Settings.
 
-### 3. Connect the app
+### 3. Point the app at it
 
-1. Open Stops → **Settings** → **SharePoint archive**.
-2. Paste the **Application (client) ID** from the registration's Overview page.
-3. Paste the **Directory (tenant) ID**, or leave `organizations` to accept any
-   work account.
-4. **Connect**, sign in, then **Test connection**. That call creates the folder
-   and confirms the whole chain — token, drive, folder, write permission.
-5. Turn on **Archive photographs to SharePoint**.
-
-Everything is stored per-browser, so each device is configured once.
+In **Settings** → **SharePoint archive** → **Use a different app registration**,
+paste the **Application (client) ID** and **Directory (tenant) ID** from the
+registration's Overview page. Then connect as above.
 
 ---
 

@@ -87,9 +87,9 @@ queued, survive a reload, retry automatically when the network returns, and use
 a resumable Graph upload session above 4MB so a big file over patchy mobile data
 does not have to start again.
 
-It needs a one-time Microsoft Entra ID app registration — about three minutes,
-and only you can do it since it lives in your tenant.
-**[Full instructions in SHAREPOINT.md](SHAREPOINT.md).**
+The Entra registration ships with the build, so turning it on is: **Settings →
+SharePoint archive → Connect → Test connection → flip the switch.** Archiving
+stays off until you do. **[Details in SHAREPOINT.md](SHAREPOINT.md).**
 
 ---
 

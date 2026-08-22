@@ -28,11 +28,15 @@ const PKCE_KEY  = 'stops.ms.pkce';
     `tenant` may be a tenant id, a domain, or 'organizations' / 'common'.      */
 
 export const defaultConfig = () => ({
-  clientId: '',
-  tenant: 'organizations',
+  /* The Entra registration this build ships against. A client ID and a tenant
+     ID are public identifiers — both travel in the query string of every
+     authorize request — so they are configuration, not credentials. Shipping
+     them means a new device just taps Connect. Settings can override both. */
+  clientId: 'e0ed735c-665a-46e6-a07b-82ada187ec7b',
+  tenant: 'd9ab9fea-2b47-4817-9517-98fff790232b',
   folder: 'Apps/Stops Photography',
   driveId: '',          // blank = the signed-in user's own OneDrive
-  enabled: false,
+  enabled: false,       // archiving stays opt-in
 });
 
 export const config = () => ({ ...defaultConfig(), ...(store.get().sharepoint || {}) });
