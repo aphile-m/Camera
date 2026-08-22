@@ -1,10 +1,10 @@
 /* Offline shell. Cache-first for the app's own files, so a shoot in a field
    with no signal works exactly like one at home. */
-const VERSION = 'stops-v1';
+const VERSION = 'stops-v2';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/app.js',
-  './js/core/photo.js', './js/core/store.js',
+  './js/core/photo.js', './js/core/store.js', './js/core/sharepoint.js',
   './js/data/curriculum.js', './js/data/scenes.js', './js/data/reference.js',
   './js/ui/dom.js', './js/ui/icons.js', './js/ui/diagrams.js', './js/ui/parts.js',
   './js/views/home.js', './js/views/learn.js', './js/views/practice.js',
@@ -24,7 +24,13 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const { request } = e;
-  if (request.method !== 'GET' || new URL(request.url).origin !== location.origin) return;
+  const url = new URL(request.url);
+  /* Same-origin GETs only. Microsoft Graph and the sign-in endpoints must
+     always go straight to the network — a cached token response would be
+     both wrong and dangerous. */
+  if (request.method !== 'GET' || url.origin !== location.origin) return;
+  /* The OAuth redirect carries ?code=… — let it reach the page, not the cache. */
+  if (url.search.includes('code=') || url.search.includes('error=')) return;
 
   e.respondWith(
     caches.match(request).then(cached => {

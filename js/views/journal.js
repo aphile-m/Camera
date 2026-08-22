@@ -8,6 +8,7 @@ import { h, toast, relative, sheet } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import { Section, Card, Note, KV, Empty, Chips, Seg, Bar } from '../ui/parts.js';
 import * as store from '../core/store.js';
+import * as sp from '../core/sharepoint.js';
 import * as P from '../core/photo.js';
 import { DRILLS, drillById, LESSONS, lessonById } from '../data/curriculum.js';
 
@@ -73,8 +74,11 @@ function EntryList(state, rerender) {
           ...e.faults.slice(0, 3).map(f => h('span', {
             style: { fontSize: '11px', padding: '3px 8px', borderRadius: '999px', background: 'var(--surface-2)', border: '1px solid var(--line)', color: 'var(--muted)' },
           }, faultById(f)?.label || f))) : null,
-        e.rating ? h('div', { style: { marginTop: '6px', color: 'var(--accent)', fontSize: '12px', letterSpacing: '2px' } },
-          '★'.repeat(e.rating) + '☆'.repeat(5 - e.rating)) : null));
+        h('div.row', { style: { gap: '10px', marginTop: '6px', alignItems: 'center' } },
+          e.rating ? h('span', { style: { color: 'var(--accent)', fontSize: '12px', letterSpacing: '2px' } },
+            '★'.repeat(e.rating) + '☆'.repeat(5 - e.rating)) : null,
+          e.remote ? h('span.tiny', { style: { color: 'var(--green)' } }, '☁ archived')
+            : e.originalId ? h('span.tiny', { style: { color: 'var(--accent)' } }, '↑ queued') : null)));
   }));
 }
 
@@ -174,14 +178,25 @@ export function JournalEntryView(state, id, rerender) {
     } }, icon('star', 20))));
 
   const preview = h('div', {});
+  const syncNote = h('div', {});
+  const cloudOn = sp.config().enabled && sp.isSignedIn();
+
   const fileInput = h('input', {
     type: 'file', accept: 'image/*', style: { display: 'none' },
     onChange: async e => {
       const file = e.target.files?.[0]; if (!file) return;
       try {
-        const { id: imageId } = await store.storeImageFile(file);
-        draft.imageId = imageId;
-        preview.replaceChildren(h('img', { src: URL.createObjectURL(file), style: { borderRadius: 'var(--r)', maxHeight: '220px', width: '100%', objectFit: 'cover' } }));
+        const saved = await store.storeImageFile(file, { keepOriginal: cloudOn });
+        draft.imageId = saved.id;
+        draft.originalId = saved.originalId;
+        draft.originalName = saved.originalName;
+        preview.replaceChildren(h('img', {
+          src: URL.createObjectURL(file),
+          style: { borderRadius: 'var(--r)', maxHeight: '220px', width: '100%', objectFit: 'cover' },
+        }));
+        syncNote.replaceChildren(cloudOn
+          ? Note('info', `The full-resolution original (${(file.size / 1e6).toFixed(1)}MB) uploads to SharePoint when you save. A preview stays on this device so the journal still works offline.`)
+          : Note('info', 'Stored on this device only. Turn on SharePoint sync in Settings to archive the full-resolution original.'));
       } catch { toast('Could not read that image'); }
     },
   });
@@ -198,9 +213,16 @@ export function JournalEntryView(state, id, rerender) {
     field('Focal length mm', 'focal', { type: 'number', number: true, placeholder: '35' }));
 
   const save = () => {
-    if (isNew) store.addEntry(draft);
-    else store.updateEntry(id, draft);
-    toast(isNew ? 'Logged' : 'Saved');
+    const record = isNew ? store.addEntry(draft) : (store.updateEntry(id, draft), { id, ...draft });
+    if (cloudOn && draft.originalId) {
+      const stamp = new Date(record.at || Date.now()).toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      const ext = (draft.originalName || 'photo.jpg').split('.').pop().toLowerCase();
+      const slug = (draft.title || 'frame').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').slice(0, 40).toLowerCase();
+      sp.queueUpload(record.id, draft.originalId, `${stamp}-${slug || 'frame'}.${ext}`);
+      toast('Logged — uploading to SharePoint');
+    } else {
+      toast(isNew ? 'Logged' : 'Saved');
+    }
     location.hash = '#/journal';
   };
 
@@ -216,6 +238,7 @@ export function JournalEntryView(state, id, rerender) {
       field('What was it', 'title', { placeholder: 'Backlit portrait, back lane' }),
       preview,
       h('button.btn.btn-sm', { onClick: () => fileInput.click() }, icon('image', 16), draft.imageId ? 'Replace photograph' : 'Attach the photograph'),
+      syncNote,
       fileInput)),
 
     Section('Settings', Card(settingsRow)),
@@ -232,9 +255,14 @@ export function JournalEntryView(state, id, rerender) {
 
     h('div.row', { style: { gap: '10px', marginTop: '24px' } },
       h('button.btn.btn-primary', { style: { flex: '1' }, onClick: save }, isNew ? 'Log it' : 'Save'),
-      !isNew ? h('button.btn', { onClick: () => {
-        if (confirm('Delete this entry? This cannot be undone.')) {
-          store.deleteEntry(id); toast('Deleted'); location.hash = '#/journal';
+      !isNew ? h('button.btn', { onClick: async () => {
+        const remote = existing?.remote;
+        const alsoCloud = remote && confirm('Also delete the archived copy from SharePoint?');
+        if (!confirm('Delete this entry? This cannot be undone.')) return;
+        if (alsoCloud) {
+          try { await sp.deleteImage(remote); }
+          catch (e) { toast('Entry deleted; the SharePoint copy could not be removed'); }
         }
+        store.deleteEntry(id); toast('Deleted'); location.hash = '#/journal';
       } }, icon('trash', 16)) : null));
 }

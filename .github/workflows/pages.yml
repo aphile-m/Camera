@@ -1,0 +1,43 @@
+# Publish Stops to GitHub Pages.
+# The app is static — no build step — so this uploads the repository as-is.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [claude/photography-app-redesign-sjyek1, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish; queue at most one more behind it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # enablement: true turns Pages on for the repo if it is not already,
+      # so this workflow is the only step needed to go live.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Strip files that do not belong on the site
+        run: rm -rf .github .git
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

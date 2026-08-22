@@ -7,6 +7,7 @@ import { icon } from './ui/icons.js';
 import { Card, Note, Seg, Chips } from './ui/parts.js';
 import * as store from './core/store.js';
 import * as P from './core/photo.js';
+import * as sp from './core/sharepoint.js';
 
 import { HomeView } from './views/home.js';
 import { LearnView, LessonView } from './views/learn.js';
@@ -119,6 +120,15 @@ function Shell() {
 
   window.addEventListener('hashchange', rerender);
 
+  /* A background upload finishing changes what Journal and Settings should
+     show. Re-render those, but never while a form is open — that would throw
+     away whatever the user is halfway through typing. */
+  window.addEventListener('stops:sync', () => {
+    const { section, param } = parseRoute();
+    const isForm = section === 'journal' && param;
+    if (!isForm && (section === 'journal' || section === 'settings')) rerender();
+  });
+
   return { node: h('div', { id: 'app' }, topbar, main, nav), rerender };
 }
 
@@ -154,9 +164,18 @@ function onboard(rerender) {
 
 /* ---------- Boot ------------------------------------------------------------ */
 
-function boot() {
+async function boot() {
   const state = store.get();
   applyTheme(state.profile.theme || 'auto');
+
+  /* If we have just come back from a Microsoft sign-in, finish it before the
+     first render so Settings shows the connected state straight away. */
+  let authMessage = null;
+  if (location.search.includes('code=') || location.search.includes('error=')) {
+    try {
+      if (await sp.completeSignIn()) authMessage = 'Connected to Microsoft';
+    } catch (e) { authMessage = e.message; }
+  }
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(store.get().profile.theme || 'auto'));
 
   if (!location.hash) location.hash = '#/';
@@ -166,7 +185,11 @@ function boot() {
   rerender();
   store.touch('visit');
 
+  if (authMessage) { toast(authMessage); rerender(); }
   if (!state.onboarded) onboard(rerender);
+
+  /* Anything queued while offline goes up now. */
+  sp.flush().catch(() => {});
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

@@ -7,6 +7,7 @@ import { icon } from '../ui/icons.js';
 import { Section, Card, Note, KV, Seg, Chips, Slider, Switch, Empty } from '../ui/parts.js';
 import * as store from '../core/store.js';
 import * as P from '../core/photo.js';
+import * as sp from '../core/sharepoint.js';
 import { LESSONS, DRILLS } from '../data/curriculum.js';
 
 export function SettingsView(state, rerender) {
@@ -91,6 +92,8 @@ export function SettingsView(state, rerender) {
                   () => toast('Location unavailable'), { timeout: 8000 });
               } }, icon('compass', 15), 'Locate me'))))),
 
+    SharePointSection(state, rerender),
+
     Section('Your data', Card(h('div.stack', {},
       KV([
         ['Lessons read', `${LESSONS.filter(l => state.lessons[l.id]?.read).length} of ${LESSONS.length}`],
@@ -127,6 +130,86 @@ export function SettingsView(state, rerender) {
         'Stops is a photography coach, not a camera app. It works offline, stores nothing on a server, and has no account. Everything it calculates — exposure, depth of field, sun position — is worked out on this device from first principles.'),
       h('p', { class: 'small', style: { marginTop: '10px' } },
         'The advice is deliberately opinionated. Where photographers disagree, it picks the answer that helps a beginner improve fastest and says why.'))));
+}
+
+/* ---------- SharePoint --------------------------------------------------- */
+
+function SharePointSection(state, rerender) {
+  const cfg = sp.config();
+  const signedIn = sp.isSignedIn();
+  const who = sp.account();
+  const pending = sp.pendingCount();
+  const status = h('div', {});
+
+  const cfgField = (label, key, placeholder, hint) => {
+    const input = h('input', {
+      type: 'text', placeholder,
+      onInput: e => store.update(s => { s.sharepoint = { ...sp.config(), [key]: e.target.value.trim() }; }),
+    });
+    input.value = cfg[key] ?? '';
+    return h('label.field', {}, h('span.lab', {}, label), input,
+      hint ? h('p', { class: 'tiny', style: { marginTop: '6px' } }, hint) : null);
+  };
+
+  return Section('SharePoint archive', Card(h('div.stack', {},
+    h('p', { class: 'small' },
+      'Optional. With this on, the full-resolution original of every journal photograph is archived to your SharePoint or OneDrive, while a preview stays on this device so the journal still works with no signal. Leave it off and nothing ever leaves the device.'),
+
+    !sp.isConfigured()
+      ? h('div.stack', {},
+          Note('warn', 'This needs a one-time app registration in Microsoft Entra ID — about three minutes. The exact steps are in SHAREPOINT.md in the repository.'),
+          cfgField('Application (client) ID', 'clientId', '00000000-0000-0000-0000-000000000000',
+            'From Entra ID → App registrations → your app → Overview.'),
+          cfgField('Directory (tenant) ID', 'tenant', 'organizations',
+            'Your tenant ID, or leave as "organizations" to accept any work account.'),
+          h('div', {},
+            h('span.eyebrow', { style: { display: 'block', marginBottom: '6px' } }, 'Redirect URI to register'),
+            h('code', { class: 'num', style: { display: 'block', padding: '10px 12px', background: 'var(--surface-2)', border: '1px solid var(--line)', borderRadius: 'var(--r)', fontSize: '12px', wordBreak: 'break-all' } },
+              sp.redirectUri()),
+            h('p', { class: 'tiny', style: { marginTop: '6px' } },
+              'Add this as a Single-page application redirect URI in the registration. It must match exactly.')))
+      : h('div.stack', {},
+          h('div.row-between', {},
+            h('div', {},
+              h('div', { style: { fontWeight: '600', fontSize: '14.5px' } },
+                signedIn ? (who?.name || 'Connected') : 'Not connected'),
+              h('div.tiny', { style: { marginTop: '2px' } },
+                signedIn ? (who?.mail || 'Signed in to Microsoft') : 'Sign in to start archiving')),
+            signedIn
+              ? h('button.btn.btn-sm', { onClick: () => { sp.signOut(); rerender(); } }, 'Sign out')
+              : h('button.btn.btn-sm.btn-primary', { onClick: () => sp.signIn().catch(e => toast(e.message)) }, 'Connect')),
+
+          signedIn ? Switch('Archive photographs to SharePoint', cfg.enabled, v => {
+            store.update(s => { s.sharepoint = { ...sp.config(), enabled: v }; });
+            if (v) sp.flush();
+            rerender();
+          }) : null,
+
+          cfgField('Folder', 'folder', 'Apps/Stops Photography',
+            'Created automatically the first time you test the connection.'),
+          cfgField('Drive ID', 'driveId', 'Leave blank for your own OneDrive',
+            'Set this only to target a specific SharePoint document library instead of your OneDrive.'),
+
+          pending ? Note('warn', `${pending} photograph${pending > 1 ? 's' : ''} waiting to upload. They go up automatically when you are online.`) : null,
+
+          signedIn ? h('div.row', { style: { gap: '8px' } },
+            h('button.btn.btn-sm', { style: { flex: '1' }, onClick: async e => {
+              const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Testing…';
+              try {
+                const r = await sp.testConnection();
+                status.replaceChildren(Note('good',
+                  `Connected as ${r.user} (${r.mail}). Writing to "${r.drive}"${r.quotaFreeGB ? `, ${r.quotaFreeGB}GB free` : ''}. The folder is ready.`));
+              } catch (err) {
+                status.replaceChildren(Note('bad', err.message));
+              } finally { btn.disabled = false; btn.textContent = 'Test connection'; }
+            } }, 'Test connection'),
+            pending ? h('button.btn.btn-sm', { style: { flex: '1' }, onClick: async () => {
+              await sp.flush({ onChange: r => r.error && toast(r.error) });
+              rerender();
+            } }, 'Upload now') : null) : null,
+          status),
+
+    Note('info', 'There is no server and no client secret. The app signs you in directly with Microsoft using PKCE, and talks to Microsoft Graph from the browser. Nobody but you and Microsoft ever sees the files.'))));
 }
 
 function addLens(rerender) {

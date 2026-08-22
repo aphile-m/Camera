@@ -2,13 +2,16 @@
 
 **Learn photography, one stop at a time.**
 
+**Live: <https://aphile-m.github.io/Camera/>**
+
 A methodical coach for a beginner with a camera. It is not a camera app and not a
 settings lookup table — it is a path from "I own a DSLR" to "I know why this frame
 works", built around the idea that reading is the smaller half and the shooting is
 the point.
 
-Runs entirely in the browser, works offline, stores nothing on a server, has no
-account and no build step.
+Runs entirely in the browser, works offline, has no build step and needs no
+account. Journal photographs can optionally be archived to your own SharePoint
+or OneDrive — see [SHAREPOINT.md](SHAREPOINT.md).
 
 ---
 
@@ -70,6 +73,26 @@ you sharp frames."*
 
 ---
 
+## The SharePoint archive, briefly
+
+Optional cloud storage for the photographs you log. The split is:
+
+| | |
+|---|---|
+| **Device** (IndexedDB) | a 1400px preview — always there, works offline |
+| **SharePoint** | the full-resolution original, archived |
+
+Once a file has uploaded, the device stops carrying the original. Uploads are
+queued, survive a reload, retry automatically when the network returns, and use
+a resumable Graph upload session above 4MB so a big file over patchy mobile data
+does not have to start again.
+
+It needs a one-time Microsoft Entra ID app registration — about three minutes,
+and only you can do it since it lives in your tenant.
+**[Full instructions in SHAREPOINT.md](SHAREPOINT.md).**
+
+---
+
 ## Running it
 
 Any static file server. There is no build step and no dependencies.
@@ -81,6 +104,9 @@ npx http-server -p 8000
 ```
 
 Then open `http://localhost:8000`.
+
+It is already deployed: every push to the default branch publishes to
+<https://aphile-m.github.io/Camera/> via `.github/workflows/pages.yml`.
 
 It must be served over HTTP rather than opened as a `file://` URL, because it uses
 ES modules. Deploy by copying the directory to any static host — GitHub Pages,
@@ -99,12 +125,14 @@ css/app.css             the design system: tokens, light and dark, components
 js/app.js               router, shell, onboarding
 js/core/photo.js        the photographic engine — pure functions, no DOM
 js/core/store.js        state, localStorage, IndexedDB for journal photographs
+js/core/sharepoint.js   optional Microsoft Graph sync — PKCE auth, resumable uploads
 js/data/curriculum.js   35 lessons, 35 drills, 75 review cards
 js/data/scenes.js       24 scene recipes and 8 time-lapse presets
 js/data/reference.js    the field cards
 js/ui/                  hyperscript, icons, 32 SVG diagrams, shared components
 js/views/               one module per section
 sw.js                   offline shell
+.github/workflows/      GitHub Pages deployment
 ```
 
 No dependencies, no bundler, no transpiler. ES modules loaded directly by the
@@ -144,11 +172,19 @@ Everything passes WCAG AA contrast in both themes, every tap target is at least
 
 ## Privacy
 
-Nothing leaves the device. There is no account, no analytics and no network
-request after the first load. Location, if you grant it, is used only to compute
-sun times locally and is stored in this browser. Journal photographs go into
-IndexedDB on the device, downscaled to 1400 px. Settings has an export for a JSON
-backup and a restore to match.
+**By default nothing leaves the device.** There is no account, no analytics and
+no network request after the first load. Location, if you grant it, is used only
+to compute sun times locally and is stored in this browser. Journal photographs
+go into IndexedDB on the device, downscaled to 1400 px. Settings has an export
+for a JSON backup and a restore to match.
+
+**The one exception is opt-in.** If you connect a Microsoft account under
+Settings → SharePoint archive, the full-resolution original of each journal
+photograph is uploaded to *your* SharePoint or OneDrive. Nothing else is ever
+sent — not your progress, not the journal text, not your location. The app signs
+you in directly with Microsoft using OAuth 2.0 + PKCE as a public client, so
+there is no server in the middle and no secret in this repository. Turn the
+switch off and the app goes back to being entirely local.
 
 ---
 

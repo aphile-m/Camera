@@ -31,6 +31,8 @@ const BLANK = {
   streak: { current: 0, best: 0, last: null },
   location: null,        // { lat, lon, label }
   lastRoute: '#/',
+  sharepoint: null,      // { clientId, tenant, folder, driveId, enabled }
+  uploadQueue: [],       // pending SharePoint uploads, survives a reload
 };
 
 let state = load();
@@ -51,6 +53,7 @@ function migrate(s) {
   s.profile = { ...BLANK.profile, ...(s.profile || {}) };
   for (const k of ['lessons', 'drills', 'reviews', 'activity']) s[k] ||= {};
   s.journal ||= [];
+  s.uploadQueue ||= [];
   return s;
 }
 
@@ -230,8 +233,10 @@ export const putImage    = (id, blob) => tx('readwrite', s => s.put(blob, id));
 export const getImage    = id         => tx('readonly',  s => s.get(id));
 export const deleteImage = id         => tx('readwrite', s => s.delete(id));
 
-/* Downscale before storing — a journal is about the notes, not the archive. */
-export async function storeImageFile(file, maxEdge = 1400) {
+/* Two copies with different jobs: a downscaled thumbnail that lives on the
+   device forever and works offline, and — when cloud sync is on — the original
+   file, held only until it has been uploaded and then discarded locally. */
+export async function storeImageFile(file, { maxEdge = 1400, keepOriginal = false } = {}) {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
   const w = Math.round(bitmap.width * scale), h = Math.round(bitmap.height * scale);
@@ -240,9 +245,16 @@ export async function storeImageFile(file, maxEdge = 1400) {
   canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
   bitmap.close?.();
   const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.82));
+
   const id = uid();
   await putImage(id, blob);
-  return { id, width: w, height: h };
+
+  let originalId = null;
+  if (keepOriginal) {
+    originalId = uid();
+    await putImage(originalId, file);
+  }
+  return { id, originalId, width: w, height: h, originalName: file.name, originalSize: file.size };
 }
 
 /* ---------- Export / import ----------------------------------------------- */
