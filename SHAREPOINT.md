@@ -114,13 +114,56 @@ registration's Overview page. Then connect as above.
 
 ---
 
+## Sync
+
+Turning on **Sync progress across devices** keeps lessons, drills, the review
+schedule and the journal in step through one `state.json` beside your
+photographs. Same account, same folder, no second service.
+
+It is not last-write-wins. Every collection merges by a rule chosen from what
+the data means:
+
+| | |
+|---|---|
+| **Lessons** | read anywhere is read everywhere; the earliest date wins, because that is when you actually read it |
+| **Drills** | completion sticks; the reflection from the later edit wins, but a blank never erases what the other device wrote |
+| **Reviews** | the later answer wins outright — it carries the newer interval and ease |
+| **Journal** | per entry, the later edit wins. Deletions leave a tombstone so an entry cannot be resurrected, unless it was edited *after* the delete |
+| **Activity** | per day, the higher count of each kind |
+| **Streak** | not synced at all — recomputed from the merged days, so it can never disagree with them |
+| **Settings** | last write wins, stamped as a whole |
+
+Writes use the file's ETag as `If-Match`, so a device that pushes while another
+device's write is in flight gets a 412 and re-reads, re-merges and retries
+rather than clobbering. Merging is idempotent and order-independent, which is
+what makes that retry safe.
+
+One caveat worth knowing: `ETag` is not a CORS-safelisted response header. Graph
+exposes it, but if that ever stopped, concurrency control would silently switch
+off and a lost write is invisible. So when the header is missing the client
+falls back to reading the item's metadata, where the same value travels in the
+body and CORS cannot hide it.
+
+Photographs are not copied between devices. A device that did not take a frame
+fetches a server-rendered thumbnail from Graph and caches it, so the journal
+looks complete everywhere without moving originals around.
+
+Sync runs on launch, when the app returns to the foreground, when the network
+comes back, and a few seconds after any change. **Settings → Sync now** forces
+it.
+
+---
+
 ## Where the files go
 
-By default `Apps/Stops Photography/` in your OneDrive for Business, named:
+By default `Apps/Stops Photography/` in your OneDrive for Business. Photographs
+are named:
 
 ```
 2026-08-22-17-42-10-backlit-portrait-back-lane.jpg
 ```
+
+and the synced progress document sits alongside them as `state.json`.
 
 Change the folder in Settings. To target a document library on a team site
 instead, put its Graph **Drive ID** in the Drive ID field — find it with:

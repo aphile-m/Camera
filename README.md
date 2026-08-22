@@ -87,6 +87,12 @@ queued, survive a reload, retry automatically when the network returns, and use
 a resumable Graph upload session above 4MB so a big file over patchy mobile data
 does not have to start again.
 
+**Progress syncs through the same account.** Lessons, drills, the review
+schedule and the journal reconcile across every device through one document in
+your OneDrive — merged per collection by what the data means rather than
+last-write-wins, with ETag concurrency so two devices writing at once cannot
+lose each other's work.
+
 The Entra registration ships with the build, so turning it on is: **Settings →
 SharePoint archive → Connect → Test connection → flip the switch.** Archiving
 stays off until you do. **[Details in SHAREPOINT.md](SHAREPOINT.md).**
@@ -155,7 +161,8 @@ css/app.css             the design system: tokens, light and dark, components
 js/app.js               router, shell, onboarding
 js/core/photo.js        the photographic engine — pure functions, no DOM
 js/core/store.js        state, localStorage, IndexedDB for journal photographs
-js/core/sharepoint.js   optional Microsoft Graph sync — PKCE auth, resumable uploads
+js/core/sharepoint.js   optional Microsoft Graph client — PKCE auth, resumable uploads
+js/core/sync.js         cross-device merge engine and the sync round trip
 js/data/curriculum.js   35 lessons, 35 drills, 75 review cards
 js/data/scenes.js       24 scene recipes and 8 time-lapse presets
 js/data/reference.js    the field cards

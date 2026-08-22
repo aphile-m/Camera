@@ -6,6 +6,11 @@
 
 import { DEFAULT_GEAR } from './photo.js';
 
+/* Imported lazily: sync.js imports this module, so a static import would be a
+   cycle. The nudge is fire-and-forget — sync decides whether it is even on. */
+let nudge = () => {};
+export const setSyncNudge = fn => { nudge = fn; };
+
 const KEY = 'stops.state.v1';
 const listeners = new Set();
 
@@ -31,8 +36,11 @@ const BLANK = {
   streak: { current: 0, best: 0, last: null },
   location: null,        // { lat, lon, label }
   lastRoute: '#/',
-  sharepoint: null,      // { clientId, tenant, folder, driveId, enabled }
+  sharepoint: null,      // { clientId, tenant, folder, driveId, enabled, syncEnabled }
   uploadQueue: [],       // pending SharePoint uploads, survives a reload
+  deleted: {},           // journal tombstones: id -> deletedAt, so a delete syncs
+  settingsAt: 0,         // stamp for last-write-wins on profile/gear/location
+  lastSyncAt: 0,
 };
 
 let state = load();
@@ -54,6 +62,7 @@ function migrate(s) {
   for (const k of ['lessons', 'drills', 'reviews', 'activity']) s[k] ||= {};
   s.journal ||= [];
   s.uploadQueue ||= [];
+  s.deleted ||= {};
   return s;
 }
 
@@ -68,13 +77,38 @@ function persist() {
 
 export function get() { return state; }
 
+/* Write through immediately, for the moments where a caller must be able to
+   rely on what is on disk — a sync completing, or a test reading it back. */
+export function flushWrites() {
+  clearTimeout(saveTimer);
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+}
+
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+
+/* Fields whose last writer wins across devices. Touching any of them stamps
+   the settings clock so the merge can order two devices' edits. */
+const SETTINGS_KEYS = ['profile', 'gear', 'location'];
+
+let muteNudge = false;
+/* Apply changes that came *from* a sync. Without this, folding a merge back
+   into the store looks like a local edit and schedules another sync, which
+   reads its own write back — harmless but pointless traffic. */
+export function updateQuietly(mutator) {
+  muteNudge = true;
+  try { return update(mutator); } finally { muteNudge = false; }
+}
 
 /* Mutate through here so every change notifies and persists exactly once. */
 export function update(mutator) {
+  const before = SETTINGS_KEYS.map(k => JSON.stringify(state[k]));
   mutator(state);
+  if (SETTINGS_KEYS.some((k, i) => JSON.stringify(state[k]) !== before[i])) {
+    state.settingsAt = Date.now();
+  }
   persist();
   for (const fn of listeners) fn(state);
+  if (!muteNudge) nudge();
   return state;
 }
 
@@ -184,7 +218,8 @@ export function dueCards() {
 /* ---------- Journal ------------------------------------------------------- */
 
 export function addEntry(entry) {
-  const record = { id: uid(), at: Date.now(), ...entry };
+  const now = Date.now();
+  const record = { id: uid(), at: now, updatedAt: now, ...entry };
   update(s => { s.journal.unshift(record); });
   touch('frames', entry.frames || 1);
   return record;
@@ -193,14 +228,20 @@ export function addEntry(entry) {
 export function updateEntry(id, patch) {
   update(s => {
     const i = s.journal.findIndex(e => e.id === id);
-    if (i >= 0) s.journal[i] = { ...s.journal[i], ...patch };
+    if (i >= 0) s.journal[i] = { ...s.journal[i], ...patch, updatedAt: Date.now() };
   });
 }
 
 export function deleteEntry(id) {
   const entry = state.journal.find(e => e.id === id);
-  update(s => { s.journal = s.journal.filter(e => e.id !== id); });
+  update(s => {
+    s.journal = s.journal.filter(e => e.id !== id);
+    /* A tombstone, so the other device deletes it too rather than pushing it
+       back on the next merge. */
+    s.deleted = { ...s.deleted, [id]: Date.now() };
+  });
   if (entry?.imageId) deleteImage(entry.imageId).catch(() => {});
+  if (entry?.originalId) deleteImage(entry.originalId).catch(() => {});
 }
 
 /* ---------- Images (IndexedDB) -------------------------------------------- */

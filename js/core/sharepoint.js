@@ -311,6 +311,80 @@ export async function testConnection() {
   };
 }
 
+/* ---------- JSON documents, with optimistic concurrency ----------------------- */
+/*  Used by sync.js. Read returns the ETag; write sends it back as If-Match, and
+    a 412 means another device got there first — which the caller handles by
+    re-reading and re-merging, never by forcing.                               */
+
+const jsonPath = name => `${driveRoot()}/root:/${encodePath(`${config().folder}/${name}.json`)}`;
+
+export async function readJson(name) {
+  const token = await accessToken();
+  const res = await fetch(`${GRAPH}${jsonPath(name)}:/content`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 404) return { data: null, etag: null };
+  if (res.status === 401) { clearToken(); throw new AuthError('Microsoft session expired. Connect again in Settings.'); }
+  if (!res.ok) throw new GraphError(`Could not read ${name}.json (${res.status})`, res.status);
+
+  const text = await res.text();
+  let data;
+  try { data = text ? JSON.parse(text) : null; }
+  catch { /* Better to stop than overwrite something we cannot understand. */
+    throw new GraphError(`${name}.json is not valid JSON — refusing to overwrite it.`, 422);
+  }
+
+  /* ETag is not a CORS-safelisted response header, so a cross-origin read only
+     sees it when the server sends Access-Control-Expose-Headers. Graph does,
+     but relying on that silently disables concurrency control the day it stops
+     — and a lost write is invisible. Fall back to the item metadata, where the
+     same value travels in the body and CORS cannot hide it. */
+  let etag = res.headers.get('etag');
+  if (!etag) {
+    const meta = await graph(`${jsonPath(name)}?$select=eTag,cTag`).catch(() => null);
+    etag = meta?.eTag || meta?.cTag || null;
+  }
+  return { data, etag };
+}
+
+/* True when the last write went out without an ETag — surfaced in Settings,
+   because syncing without concurrency control is worth knowing about. */
+export let lastWriteUnguarded = false;
+
+export async function writeJson(name, data, etag = null) {
+  lastWriteUnguarded = !etag;
+  const token = await accessToken();
+  const res = await fetch(`${GRAPH}${jsonPath(name)}:/content`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...(etag ? { 'If-Match': etag } : {}),
+    },
+    body: JSON.stringify(data),
+  });
+  if (res.status === 412) throw new Error('CONFLICT');
+  if (res.status === 401) { clearToken(); throw new AuthError('Microsoft session expired. Connect again in Settings.'); }
+  if (!res.ok) throw new GraphError(`Could not write ${name}.json (${res.status})`, res.status);
+  return res.json().catch(() => null);
+}
+
+/* ---------- Thumbnails --------------------------------------------------------- */
+/*  A device that did not take the photograph has no local copy, and the stored
+    original is several megabytes. Graph renders thumbnails server-side, so a
+    second device pulls a preview rather than the whole frame.                   */
+
+export async function thumbnail(ref, size = 'large') {
+  const base = ref.driveId ? `/drives/${ref.driveId}` : driveRoot();
+  const meta = await graph(`${base}/items/${ref.id}/thumbnails?$select=${size}`);
+  const url = meta?.value?.[0]?.[size]?.url;
+  if (!url) return null;
+  /* The thumbnail URL is pre-authorised and short-lived — no bearer token. */
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return res.blob();
+}
+
 /* ---------- The sync queue ---------------------------------------------------- */
 /*  Uploads are queued rather than awaited, so attaching a photograph never
     blocks saving a journal entry, and a shoot logged in a field with no signal

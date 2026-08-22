@@ -95,14 +95,17 @@ The redirect URI is unchanged — `https://aphile-m.github.io/Camera/` — becau
 the WebView loads that same origin, so the existing Entra registration works
 with no new entry.
 
-## One thing to know about your data
+## Your data across devices
 
-The shell's WebView has its **own storage**, separate from Chrome on the same
-phone. Progress, journal entries and settings in the app are therefore separate
-from the browser version — they are the same code on the same origin, but two
-different stores.
+The shell's WebView has its own storage, separate from Chrome on the same
+phone — so on its own the app and the browser would keep two different
+journals.
 
-If you want one journal across both, either use the app only, or connect the
-SharePoint archive on each and use **Settings → Export a backup / Restore** to
-move progress across. This is worth knowing before you build up months of
-entries in one and expect them in the other.
+They don't, because sync closes that gap. Connect the same Microsoft account in
+**Settings → SharePoint archive** on each device and turn on **Sync progress
+across devices**: lessons, drills, the review schedule and the journal are
+reconciled through one document in your OneDrive. See
+[SHAREPOINT.md](SHAREPOINT.md#sync).
+
+Photographs follow the same account, and a device that did not take a frame
+pulls a server-rendered preview rather than the multi-megabyte original.

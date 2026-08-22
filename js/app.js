@@ -8,6 +8,7 @@ import { Card, Note, Seg, Chips } from './ui/parts.js';
 import * as store from './core/store.js';
 import * as P from './core/photo.js';
 import * as sp from './core/sharepoint.js';
+import * as sync from './core/sync.js';
 
 import { HomeView } from './views/home.js';
 import { LearnView, LessonView } from './views/learn.js';
@@ -188,8 +189,11 @@ async function boot() {
   if (authMessage) { toast(authMessage); rerender(); }
   if (!state.onboarded) onboard(rerender);
 
-  /* Anything queued while offline goes up now. */
+  /* Anything queued while offline goes up now, and progress reconciles with
+     whatever the other device did. */
   sp.flush().catch(() => {});
+  store.setSyncNudge(() => sync.scheduleSync());
+  sync.syncNow({ silent: true }).then(r => { if (r?.ok) rerender(); });
 
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

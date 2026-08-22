@@ -55,15 +55,22 @@ function EntryList(state, rerender) {
   }
   return h('div.card', {}, ...state.journal.map(e => {
     const thumb = h('div.thumb', {});
-    if (e.imageId) {
-      store.getImage(e.imageId).then(blob => {
-        if (!blob) return;
-        const img = h('img.thumb', { src: URL.createObjectURL(blob), alt: '' });
-        thumb.replaceWith(img);
-      }).catch(() => {});
-    }
+    /* The local copy belongs to the device that took the frame. On any other
+       device, fetch a server-rendered preview once and keep it. */
+    (async () => {
+      let blob = e.imageId ? await store.getImage(e.imageId).catch(() => null) : null;
+      if (!blob && e.remote) {
+        blob = await sp.thumbnail(e.remote).catch(() => null);
+        if (blob) {
+          const id = store.uid();
+          await store.putImage(id, blob).catch(() => {});
+          store.updateEntry(e.id, { imageId: id });
+        }
+      }
+      if (blob) thumb.replaceWith(h('img.thumb', { src: URL.createObjectURL(blob), alt: '' }));
+    })();
     return h('a.entry', { href: `#/journal/${e.id}`, style: { textDecoration: 'none', color: 'inherit' } },
-      e.imageId ? thumb : null,
+      (e.imageId || e.remote) ? thumb : null,
       h('div.grow', {},
         h('div.row-between', {},
           h('div', { style: { fontWeight: '600', fontSize: '14.5px' } }, e.title || 'Untitled frame'),

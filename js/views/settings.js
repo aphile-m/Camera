@@ -2,12 +2,13 @@
    settings.js — gear, units, theme, and getting your data out.
    ========================================================================== */
 
-import { h, toast } from '../ui/dom.js';
+import { h, toast, relative } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import { Section, Card, Note, KV, Seg, Chips, Slider, Switch, Empty } from '../ui/parts.js';
 import * as store from '../core/store.js';
 import * as P from '../core/photo.js';
 import * as sp from '../core/sharepoint.js';
+import * as sync from '../core/sync.js';
 import { LESSONS, DRILLS } from '../data/curriculum.js';
 
 export function SettingsView(state, rerender) {
