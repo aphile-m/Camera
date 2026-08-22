@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Layers point straight at the drawables. @capacitor/assets wraps each one
+     in an inset of 16.7%, which shrinks the art a second time on top of the
+     66.6% window the launcher already applies, leaving the mark small inside a
+     big disc. The vector is already sized for the safe zone, so no inset. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@drawable/ic_launcher_foreground"/>
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome"/>
+</adaptive-icon>

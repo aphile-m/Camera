@@ -1,0 +1,17 @@
+{
+  "name": "stops",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Stops — a methodical photography coach. Web app plus a Capacitor Android shell.",
+  "scripts": {
+    "serve": "python3 -m http.server 8000",
+    "android:add": "cap add android",
+    "sync": "cap sync android",
+    "build:apk": "cd android && ./gradlew assembleDebug"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0"
+  }
+}

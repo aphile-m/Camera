@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- The web app owns its own data inside Chrome, so there is nothing here to
-     back up beyond app preferences. -->
-<full-backup-content/>

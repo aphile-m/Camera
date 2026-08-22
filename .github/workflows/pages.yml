@@ -35,7 +35,12 @@ jobs:
       - uses: actions/configure-pages@v5
 
       - name: Strip files that do not belong on the site
-        run: rm -rf .github .git
+        # The Android shell, its icon overlay, the signing keystore and the
+        # Capacitor placeholder are build inputs, not part of the web app.
+        run: |
+          rm -rf .github .git android android-res android-assets android-signing www node_modules
+          rm -f package.json package-lock.json capacitor.config.json
+          ls -A
 
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -1,70 +1,116 @@
-# Build the Android app. Runs on demand, and on any tag starting with v.
-#
-# Without signing secrets it produces an unsigned release APK plus a
-# debug-signed APK you can sideload straight away. With them, it produces a
-# signed APK and an AAB ready for the Play Console.
-name: Android
+name: Android APK
+
+# Builds the Stops Android shell (Capacitor, loading the live GitHub Pages app
+# so it is always current) and publishes it as a GitHub release.
+# Actions -> Android APK -> Run workflow.
 
 on:
   workflow_dispatch:
-  push:
-    tags: ['v*']
+    inputs:
+      notes:
+        description: "Release notes"
+        required: false
+        default: "Android shell build."
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: android
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # `secrets` cannot be read from a step-level `if`, but it can be assigned
-    # to job env, and env *is* readable there.
     env:
-      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
-
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-
+          java-version: "21"
       - uses: android-actions/setup-android@v3
 
-      - name: Restore the signing keystore
-        if: env.KEYSTORE_BASE64 != ''
-        working-directory: android
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Generate the Android project and lay the icon over it
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
-          cat > keystore.properties <<PROPS
-          storeFile=release.keystore
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=$KEY_ALIAS
-          keyPassword=$KEY_PASSWORD
-          PROPS
+          npm install --no-audit --no-fund
+          npx cap add android
+          ./apply-android-overlay.sh
+          npx cap sync android
 
-      - name: Build
-        working-directory: android
+      - name: Stable signing + version stamp
         run: |
+          set -euo pipefail
+          # Copying the keystore into ~/.android is NOT enough: the Android
+          # Gradle Plugin resolves the implicit debug keystore via
+          # ANDROID_SDK_HOME and silently generates a fresh one when it is not
+          # there, which gives every build a different signature and makes
+          # updates fail with "package conflicts with an existing package".
+          # Declare the signing config explicitly. `android { }` is a closure
+          # on the extension, so a second block configures the same object.
+          mkdir -p "$HOME/.android"
+          cp android-signing/debug.keystore "$HOME/.android/debug.keystore"
+          KS="$PWD/android-signing/debug.keystore"
+          {
+            echo ""
+            echo "android {"
+            echo "    signingConfigs {"
+            echo "        stable {"
+            echo "            storeFile file('$KS')"
+            echo "            storePassword 'android'"
+            echo "            keyAlias 'androiddebugkey'"
+            echo "            keyPassword 'android'"
+            echo "        }"
+            echo "    }"
+            echo "    buildTypes {"
+            echo "        debug { signingConfig signingConfigs.stable }"
+            echo "        release { signingConfig signingConfigs.stable }"
+            echo "    }"
+            echo "}"
+          } >> android/app/build.gradle
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i -E "s/versionName \"[^\"]*\"/versionName \"1.${{ github.run_number }}\"/" android/app/build.gradle
+          grep -E "versionCode|versionName" android/app/build.gradle
+
+      - name: Note the expected signing certificate
+        run: |
+          set -euo pipefail
+          EXPECTED=$(keytool -list -v -keystore android-signing/debug.keystore -storepass android \
+            | grep -m1 'SHA256:' | tr -d ' ' | cut -d: -f2-)
+          echo "EXPECTED_SHA=$EXPECTED" >> "$GITHUB_ENV"
+
+      - name: Build debug APK
+        run: |
+          cd android
           chmod +x gradlew
-          ./gradlew assembleDebug assembleRelease bundleRelease --no-daemon
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Report what was produced
-        working-directory: android
-        run: find app/build/outputs -name '*.apk' -o -name '*.aab' | sort
+      - name: Fail the build if the APK is not signed with the stable key
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          ACTUAL=$("$BT/apksigner" verify --print-certs "$APK" \
+            | grep -m1 -i 'SHA-256 digest' | awk '{print toupper($NF)}')
+          EXPECT=$(echo "$EXPECTED_SHA" | tr -d ':' | tr 'a-f' 'A-F')
+          echo "apk cert: $ACTUAL"
+          echo "expected: $EXPECT"
+          [ "$ACTUAL" = "$EXPECT" ] || {
+            echo "::error::APK signed with the WRONG key — updates would not install over the previous release."
+            exit 1
+          }
+          echo "signed with the stable key — this build installs over the previous one"
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: stops-android
-          path: |
-            android/app/build/outputs/apk/**/*.apk
-            android/app/build/outputs/bundle/**/*.aab
-          if-no-files-found: error
-
-      - name: Remove the keystore from the runner
-        if: always()
-        working-directory: android
-        run: rm -f release.keystore keystore.properties
+      - name: Publish release
+        env:
+          NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          TAG="android-v${{ github.run_number }}"
+          cp android/app/build/outputs/apk/debug/app-debug.apk Stops.apk
+          gh release create "$TAG" --title "Stops $TAG" --notes "$NOTES" --latest Stops.apk
+          echo "APK: https://github.com/${{ github.repository }}/releases/latest/download/Stops.apk" >> "$GITHUB_STEP_SUMMARY"

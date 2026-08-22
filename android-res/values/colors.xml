@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="icon_fg">#E6B25A</color>
+    <color name="colorPrimary">#100F0D</color>
+    <color name="colorPrimaryDark">#100F0D</color>
+    <color name="colorAccent">#E6B25A</color>
+</resources>

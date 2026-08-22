@@ -1,0 +1,21 @@
+{
+  "appId": "com.aphilem.stops",
+  "appName": "Stops",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "backgroundColor": "#100F0D"
+  },
+  "server": {
+    "url": "https://aphile-m.github.io/Camera/",
+    "cleartext": false,
+    "allowNavigation": [
+      "login.microsoftonline.com",
+      "login.live.com",
+      "login.microsoft.com",
+      "graph.microsoft.com",
+      "*.sharepoint.com",
+      "*.up.1drv.com"
+    ]
+  }
+}

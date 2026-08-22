@@ -95,17 +95,22 @@ stays off until you do. **[Details in SHAREPOINT.md](SHAREPOINT.md).**
 
 ## Android
 
-`android/` wraps the deployed site as a Trusted Web Activity — the same app,
-the same storage, no browser UI, in a 133KB APK. One codebase: pushing to the
-site updates the Android app without a release.
+A Capacitor shell around the live site, so pushing to the web app updates the
+phone app with no rebuild. Run the **Android APK** workflow in Actions and the
+latest build is always at:
 
-```bash
-cd android && ./gradlew assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+https://github.com/aphile-m/Camera/releases/latest/download/Stops.apk
 ```
 
-Or run the **Android** workflow in GitHub Actions and download the APK from the
-artifacts. **[Details in android/README.md](android/README.md).**
+Or build it locally:
+
+```bash
+npm install && npx cap add android && ./apply-android-overlay.sh
+cd android && ./gradlew assembleDebug
+```
+
+**[Details in ANDROID.md](ANDROID.md).**
 
 ---
 
@@ -157,7 +162,9 @@ js/data/reference.js    the field cards
 js/ui/                  hyperscript, icons, 32 SVG diagrams, shared components
 js/views/               one module per section
 sw.js                   offline shell
-android/                Trusted Web Activity wrapper for Android
+capacitor.config.json   Android shell config — loads the live site
+android-res/            icon and colour overlay for the generated project
+android-signing/        committed debug keystore, for stable sideload signatures
 .github/workflows/      GitHub Pages deployment, Android build
 ```
 
