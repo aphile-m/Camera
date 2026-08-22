@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The iris: six blades leaving a hexagonal opening, inside a lens barrel.
+     Drawn at the original 512-box scale and mapped into the 108dp adaptive
+     viewport, so the art lands inside the 66dp safe zone on every launcher. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+  <group android:translateX="54" android:translateY="54"
+         android:scaleX="0.172" android:scaleY="0.172">
+    <path android:strokeColor="#000000" android:strokeWidth="11" android:fillColor="#00000000" android:pathData="M176,0 A176,176 0 1,0 -176,0 A176,176 0 1,0 176,0 Z"/>
+    <path android:fillColor="#000000" android:pathData="M8.42 -137.74A138 138 0 0 1 115.08 -76.17L59.08 -37.89L3.27 -70.11Z"/>
+    <path android:fillColor="#000000" android:pathData="M123.50 -61.58A138 138 0 0 1 123.50 61.58L62.35 32.22L62.35 -32.22Z"/>
+    <path android:fillColor="#000000" android:pathData="M115.08 76.17A138 138 0 0 1 8.42 137.74L3.27 70.11L59.08 37.89Z"/>
+    <path android:fillColor="#000000" android:pathData="M-8.42 137.74A138 138 0 0 1 -115.08 76.17L-59.08 37.89L-3.27 70.11Z"/>
+    <path android:fillColor="#000000" android:pathData="M-123.50 61.58A138 138 0 0 1 -123.50 -61.58L-62.35 -32.22L-62.35 32.22Z"/>
+    <path android:fillColor="#000000" android:pathData="M-115.08 -76.17A138 138 0 0 1 -8.42 -137.74L-3.27 -70.11L-59.08 -37.89Z"/>
+  </group>
+</vector>

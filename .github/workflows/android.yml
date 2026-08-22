@@ -1,0 +1,70 @@
+# Build the Android app. Runs on demand, and on any tag starting with v.
+#
+# Without signing secrets it produces an unsigned release APK plus a
+# debug-signed APK you can sideload straight away. With them, it produces a
+# signed APK and an AAB ready for the Play Console.
+name: Android
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # `secrets` cannot be read from a step-level `if`, but it can be assigned
+    # to job env, and env *is* readable there.
+    env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Restore the signing keystore
+        if: env.KEYSTORE_BASE64 != ''
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+          cat > keystore.properties <<PROPS
+          storeFile=release.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          PROPS
+
+      - name: Build
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug assembleRelease bundleRelease --no-daemon
+
+      - name: Report what was produced
+        working-directory: android
+        run: find app/build/outputs -name '*.apk' -o -name '*.aab' | sort
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stops-android
+          path: |
+            android/app/build/outputs/apk/**/*.apk
+            android/app/build/outputs/bundle/**/*.aab
+          if-no-files-found: error
+
+      - name: Remove the keystore from the runner
+        if: always()
+        working-directory: android
+        run: rm -f release.keystore keystore.properties

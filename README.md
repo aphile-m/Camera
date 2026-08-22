@@ -93,6 +93,22 @@ stays off until you do. **[Details in SHAREPOINT.md](SHAREPOINT.md).**
 
 ---
 
+## Android
+
+`android/` wraps the deployed site as a Trusted Web Activity — the same app,
+the same storage, no browser UI, in a 133KB APK. One codebase: pushing to the
+site updates the Android app without a release.
+
+```bash
+cd android && ./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+Or run the **Android** workflow in GitHub Actions and download the APK from the
+artifacts. **[Details in android/README.md](android/README.md).**
+
+---
+
 ## Running it
 
 Any static file server. There is no build step and no dependencies.
@@ -141,7 +157,8 @@ js/data/reference.js    the field cards
 js/ui/                  hyperscript, icons, 32 SVG diagrams, shared components
 js/views/               one module per section
 sw.js                   offline shell
-.github/workflows/      GitHub Pages deployment
+android/                Trusted Web Activity wrapper for Android
+.github/workflows/      GitHub Pages deployment, Android build
 ```
 
 No dependencies, no bundler, no transpiler. ES modules loaded directly by the

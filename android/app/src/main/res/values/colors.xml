@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches the web app's darkroom palette. -->
+    <color name="app_background">#100F0D</color>
+    <color name="icon_background">#100F0D</color>
+    <color name="icon_fg">#E6B25A</color>
+</resources>

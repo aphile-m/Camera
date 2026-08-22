@@ -1,0 +1,64 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'io.github.aphilem.stops'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'io.github.aphilem.stops'
+        minSdk 21
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+
+        // The Digital Asset Links statement Chrome checks to decide whether to
+        // run this without a URL bar. It must also be served from the site --
+        // see android/README.md.
+        resValue "string", "asset_statements",
+            '[{ "relation": ["delegate_permission/common.handle_all_urls"], ' +
+            '"target": {"namespace": "web", "site": "https://aphile-m.github.io"}}]'
+    }
+
+    signingConfigs {
+        release {
+            // Supplied by CI or a local keystore.properties; see android/README.md.
+            def props = new Properties()
+            def f = rootProject.file('keystore.properties')
+            if (f.exists()) {
+                f.withInputStream { props.load(it) }
+                storeFile file(props['storeFile'])
+                storePassword props['storePassword']
+                keyAlias props['keyAlias']
+                keyPassword props['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (rootProject.file('keystore.properties').exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // 2.5.0 rather than 2.6.x: the newer line pulls androidx.browser 1.9-alpha
+    // into the graph, and a TWA shell is not the place to ship alpha
+    // dependencies. Everything this app uses -- splash, delegation service,
+    // Custom Tabs fallback -- has been stable since 2.4.
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}
