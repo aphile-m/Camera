@@ -1,0 +1,162 @@
+/* ==========================================================================
+   settings.js — gear, units, theme, and getting your data out.
+   ========================================================================== */
+
+import { h, toast } from '../ui/dom.js';
+import { icon } from '../ui/icons.js';
+import { Section, Card, Note, KV, Seg, Chips, Slider, Switch, Empty } from '../ui/parts.js';
+import * as store from '../core/store.js';
+import * as P from '../core/photo.js';
+import { LESSONS, DRILLS } from '../data/curriculum.js';
+
+export function SettingsView(state, rerender) {
+  const gear = state.gear;
+
+  const textField = (label, value, onInput, opts = {}) => {
+    const input = h('input', { type: opts.type || 'text', placeholder: opts.placeholder || '', onInput: e => onInput(e.target.value) });
+    input.value = value ?? '';
+    return h('label.field', {}, h('span.lab', {}, label), input);
+  };
+
+  return h('div.stack-lg', { class: 'enter' },
+    h('div', {},
+      h('h1', { style: { marginTop: '6px' } }, 'Settings'),
+      h('p', { class: 'lede', style: { marginTop: '6px' } },
+        'Everything here stays on this device. Nothing is uploaded, and there is no account.')),
+
+    Section('You', Card(h('div.stack', {},
+      textField('Name', state.profile.name, v => store.update(s => { s.profile.name = v; }), { placeholder: 'Optional' }),
+      h('div', {},
+        h('span.eyebrow', { style: { display: 'block', marginBottom: '8px' } }, 'Theme'),
+        Seg([{ id: 'auto', label: 'Auto' }, { id: 'light', label: 'Light' }, { id: 'dark', label: 'Dark' }],
+          state.profile.theme, v => { store.update(s => { s.profile.theme = v; }); applyTheme(v); })),
+      h('div', {},
+        h('span.eyebrow', { style: { display: 'block', marginBottom: '8px' } }, 'Distances'),
+        Seg([{ id: 'metric', label: 'Metres' }, { id: 'imperial', label: 'Feet' }],
+          state.profile.units, v => { store.update(s => { s.profile.units = v; }); rerender(); }))))),
+
+    Section('Camera', Card(h('div.stack', {},
+      textField('Body', gear.body, v => store.update(s => { s.gear.body = v; })),
+      h('div', {},
+        h('span.eyebrow', { style: { display: 'block', marginBottom: '8px' } }, 'Sensor'),
+        Chips(Object.entries(P.SENSORS).map(([id, v]) => ({ id, label: v.label })), gear.sensor,
+          v => { store.update(s => { s.gear.sensor = v; }); rerender(); }),
+        h('p', { class: 'tiny', style: { marginTop: '8px' } },
+          `Crop factor ${P.SENSORS[gear.sensor]?.crop}× — this affects depth of field, the handheld limit and the star-trail limit.`)),
+      Slider({ label: 'Highest ISO you are happy to print', value: P.ISOS.indexOf(P.nearestISO(gear.isoCeiling)),
+        min: P.ISOS.indexOf(400), max: P.ISOS.indexOf(25600),
+        format: i => P.fmtISO(P.ISOS[i]),
+        onInput: i => store.update(s => { s.gear.isoCeiling = P.ISOS[i]; }) }),
+      h('p', { class: 'tiny' },
+        'The advisor will trade aperture and shutter speed to stay under this before it pushes ISO past it. Shoot lesson 2-4’s drill to find your own honest ceiling.'),
+      Slider({ label: 'How steady are your hands', value: (state.profile.steadiness || 0) + 2, min: 0, max: 4,
+        format: i => ['Shaky (−2 stops)', 'Below average', 'Average', 'Steady', 'Very steady (+2 stops)'][i],
+        onInput: i => store.update(s => { s.profile.steadiness = i - 2; }) })))),
+
+    Section('Lenses', h('div', {},
+      h('div.card.flush', {}, ...gear.lenses.map((l, i) =>
+        h('div', { style: { padding: '14px 16px', borderBottom: i < gear.lenses.length - 1 ? '1px solid var(--line)' : 'none', display: 'flex', gap: '12px', alignItems: 'center' } },
+          h('div.grow', {},
+            h('div', { style: { fontWeight: '600', fontSize: '14.5px' } }, l.label),
+            h('div.tiny.num', { style: { marginTop: '2px' } },
+              `${l.min === l.max ? `${l.min}mm` : `${l.min}–${l.max}mm`} · ${P.fmtAperture(l.wideAperture)}${l.wideAperture !== l.longAperture ? `–${P.fmtAperture(l.longAperture)}` : ''}${l.stabilised ? ' · stabilised' : ''}`)),
+          h('button.btn.btn-sm.btn-ghost', {
+            onClick: () => { store.update(s => { s.gear.lenses = s.gear.lenses.filter(x => x.id !== l.id); }); rerender(); },
+          }, icon('trash', 15))))),
+      h('button.btn.btn-block', { style: { marginTop: '10px' }, onClick: () => addLens(rerender) },
+        icon('plus', 16), 'Add a lens'))),
+
+    Section('Location', Card(
+      state.location
+        ? h('div', {},
+            h('div.small', {}, `${state.location.label || 'Saved'} · ${state.location.lat.toFixed(3)}, ${state.location.lon.toFixed(3)}`),
+            h('div.row', { style: { gap: '8px', marginTop: '12px' } },
+              h('button.btn.btn-sm', { onClick: () => { store.update(s => { s.location = null; }); rerender(); } }, 'Clear'),
+              h('a.btn.btn-sm', { href: '#/tools/light' }, 'Open timetable')))
+        : h('div', {},
+            h('p', { class: 'small', style: { marginBottom: '12px' } },
+              'Used only to work out sunrise, golden hour and blue hour. Calculated on this device; nothing is sent anywhere.'),
+            h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' } },
+              textField('Latitude', '', v => { state.__lat = Number(v); }, { type: 'number', placeholder: '-26.2' }),
+              textField('Longitude', '', v => { state.__lon = Number(v); }, { type: 'number', placeholder: '28.0' })),
+            h('div.row', { style: { gap: '8px', marginTop: '12px' } },
+              h('button.btn.btn-sm.btn-primary', { onClick: () => {
+                if (isNaN(state.__lat) || isNaN(state.__lon)) return toast('Enter both numbers');
+                store.update(s => { s.location = { lat: state.__lat, lon: state.__lon, label: 'Manual' }; });
+                toast('Saved'); rerender();
+              } }, 'Save'),
+              h('button.btn.btn-sm', { onClick: () => {
+                navigator.geolocation?.getCurrentPosition(
+                  pos => { store.update(s => { s.location = { lat: pos.coords.latitude, lon: pos.coords.longitude, label: 'This device' }; }); rerender(); },
+                  () => toast('Location unavailable'), { timeout: 8000 });
+              } }, icon('compass', 15), 'Locate me'))))),
+
+    Section('Your data', Card(h('div.stack', {},
+      KV([
+        ['Lessons read', `${LESSONS.filter(l => state.lessons[l.id]?.read).length} of ${LESSONS.length}`],
+        ['Drills shot', `${Object.values(state.drills).filter(d => d.completed).length} of ${DRILLS.length}`],
+        ['Journal entries', String(state.journal.length)],
+        ['Review cards', String(Object.keys(state.reviews).length)],
+      ]),
+      h('div.row', { style: { gap: '8px' } },
+        h('button.btn.btn-sm', { style: { flex: '1' }, onClick: () => {
+          const blob = new Blob([store.exportJSON()], { type: 'application/json' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = `stops-backup-${new Date().toISOString().slice(0, 10)}.json`;
+          a.click();
+          toast('Backup downloaded');
+        } }, 'Export a backup'),
+        h('button.btn.btn-sm', { style: { flex: '1' }, onClick: () => {
+          const input = h('input', { type: 'file', accept: 'application/json' });
+          input.onchange = async () => {
+            const f = input.files?.[0]; if (!f) return;
+            try { store.importJSON(await f.text()); toast('Restored'); rerender(); }
+            catch { toast('That file could not be read'); }
+          };
+          input.click();
+        } }, 'Restore')),
+      h('button.btn.btn-sm.btn-block', { onClick: () => {
+        if (confirm('Erase all progress, drills and journal entries? This cannot be undone.')) {
+          store.reset(); toast('Everything erased'); location.hash = '#/';
+        }
+      } }, 'Erase everything')))),
+
+    Section('About', Card(
+      h('p', { class: 'small' },
+        'Stops is a photography coach, not a camera app. It works offline, stores nothing on a server, and has no account. Everything it calculates — exposure, depth of field, sun position — is worked out on this device from first principles.'),
+      h('p', { class: 'small', style: { marginTop: '10px' } },
+        'The advice is deliberately opinionated. Where photographers disagree, it picks the answer that helps a beginner improve fastest and says why.'))));
+}
+
+function addLens(rerender) {
+  const draft = { id: store.uid(), label: '', min: 35, max: 35, wideAperture: 1.8, longAperture: 1.8, stabilised: false };
+  const f = (label, key, step = 1) => {
+    const input = h('input', { type: key === 'label' ? 'text' : 'number', step, onInput: e => { draft[key] = key === 'label' ? e.target.value : Number(e.target.value); } });
+    input.value = draft[key];
+    return h('label.field', {}, h('span.lab', {}, label), input);
+  };
+  import('../ui/dom.js').then(({ sheet }) => {
+    const close = sheet('Add a lens', h('div.stack', {},
+      f('Name', 'label'),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' } },
+        f('Shortest focal length', 'min'), f('Longest focal length', 'max')),
+      h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' } },
+        f('Widest aperture (wide end)', 'wideAperture', 0.1), f('Widest aperture (long end)', 'longAperture', 0.1)),
+      Switch('Stabilised (VR / IS / OIS)', false, v => { draft.stabilised = v; }),
+      h('button.btn.btn-primary.btn-block', { onClick: () => {
+        if (!draft.label.trim()) return toast('Give it a name');
+        if (draft.max < draft.min) [draft.min, draft.max] = [draft.max, draft.min];
+        store.update(s => { s.gear.lenses.push(draft); });
+        close(); rerender(); toast('Lens added');
+      } }, 'Add lens')));
+  });
+}
+
+export function applyTheme(theme) {
+  const root = document.documentElement;
+  if (theme === 'auto') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', theme);
+  const dark = theme === 'dark' || (theme === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#100f0d' : '#f7f4ef');
+}
