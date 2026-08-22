@@ -1,10 +1,10 @@
 /* Offline shell. Cache-first for the app's own files, so a shoot in a field
    with no signal works exactly like one at home. */
-const VERSION = 'stops-v2';
+const VERSION = 'stops-v3';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/app.js',
-  './js/core/photo.js', './js/core/store.js', './js/core/sharepoint.js',
+  './js/core/photo.js', './js/core/store.js', './js/core/sharepoint.js', './js/core/sync.js',
   './js/data/curriculum.js', './js/data/scenes.js', './js/data/reference.js',
   './js/ui/dom.js', './js/ui/icons.js', './js/ui/diagrams.js', './js/ui/parts.js',
   './js/views/home.js', './js/views/learn.js', './js/views/practice.js',
