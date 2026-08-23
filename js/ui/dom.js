@@ -4,6 +4,8 @@
    changes. At this scale that is faster than diffing and far easier to follow.
    ========================================================================== */
 
+import { pushLayer } from '../core/nav.js';
+
 export function h(tag, props = null, ...children) {
   if (typeof tag === 'function') return tag({ ...(props || {}), children });
 
@@ -95,7 +97,10 @@ export function toast(message) {
 }
 
 export function sheet(title, content, { onClose } = {}) {
-  const close = () => { backdrop.remove(); document.body.style.overflow = ''; onClose?.(); };
+  /* Back closes the sheet before it touches the route — dismissing what is in
+     front of you is what the button means here. */
+  let drop = () => {};
+  const close = () => { drop(); backdrop.remove(); document.body.style.overflow = ''; onClose?.(); };
   const panel = h('div.sheet', { role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
     h('div.grabber'),
     h('div.row-between', { style: { marginBottom: '14px' } },
@@ -111,6 +116,7 @@ export function sheet(title, content, { onClose } = {}) {
   });
   document.body.appendChild(backdrop);
   document.body.style.overflow = 'hidden';
+  drop = pushLayer(close);
   panel.querySelector('button')?.focus();
   return close;
 }

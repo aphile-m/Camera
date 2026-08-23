@@ -10,6 +10,7 @@ import * as P from '../core/photo.js';
 import * as sp from '../core/sharepoint.js';
 import * as sync from '../core/sync.js';
 import { captureLocation } from '../core/geo.js';
+import * as nav from '../core/nav.js';
 import { LESSONS, DRILLS } from '../data/curriculum.js';
 
 export function SettingsView(state, rerender) {
@@ -123,7 +124,8 @@ export function SettingsView(state, rerender) {
         } }, 'Restore')),
       h('button.btn.btn-sm.btn-block', { onClick: () => {
         if (confirm('Erase all progress, drills and journal entries? This cannot be undone.')) {
-          store.reset(); toast('Everything erased'); location.hash = '#/';
+          /* Every entry behind us now points at something that was erased. */
+          store.reset(); toast('Everything erased'); nav.go('#/', { replace: true });
         }
       } }, 'Erase everything')))),
 

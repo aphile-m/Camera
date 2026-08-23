@@ -10,6 +10,7 @@ import { Section, Card, Note, KV, Empty, Chips, Seg, Bar } from '../ui/parts.js'
 import * as store from '../core/store.js';
 import * as sp from '../core/sharepoint.js';
 import * as P from '../core/photo.js';
+import * as nav from '../core/nav.js';
 import { DRILLS, drillById, LESSONS, lessonById } from '../data/curriculum.js';
 
 /* The six-point critique from lesson 7-4, used as structured tags. */
@@ -230,7 +231,9 @@ export function JournalEntryView(state, id, rerender) {
     } else {
       toast(isNew ? 'Logged' : 'Saved');
     }
-    location.hash = '#/journal';
+    /* Replace, so back from the journal does not reopen the form you have
+       just submitted. */
+    nav.go('#/journal', { replace: true });
   };
 
   return h('div.stack-lg', { class: 'enter' },
@@ -270,6 +273,6 @@ export function JournalEntryView(state, id, rerender) {
           try { await sp.deleteImage(remote); }
           catch (e) { toast('Entry deleted; the SharePoint copy could not be removed'); }
         }
-        store.deleteEntry(id); toast('Deleted'); location.hash = '#/journal';
+        store.deleteEntry(id); toast('Deleted'); nav.go('#/journal', { replace: true });
       } }, icon('trash', 16)) : null));
 }

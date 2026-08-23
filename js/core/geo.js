@@ -11,11 +11,9 @@
    ========================================================================== */
 
 import * as store from './store.js';
+import { nativePlugin } from './native.js';
 
-const capacitorGeo = () =>
-  (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.())
-    ? window.Capacitor?.Plugins?.Geolocation ?? null
-    : null;
+const capacitorGeo = () => nativePlugin('Geolocation');
 
 export class LocationError extends Error {}
 

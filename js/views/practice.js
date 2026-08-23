@@ -6,6 +6,7 @@ import { h, toast } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import { Section, Card, Note, Bar, Bullets, Empty, Seg } from '../ui/parts.js';
 import * as store from '../core/store.js';
+import * as nav from '../core/nav.js';
 import { LESSONS, LEVELS, DRILLS, drillById, lessonById, cardById } from '../data/curriculum.js';
 import { levelTone, celebrate } from '../ui/motion.js';
 
@@ -103,7 +104,7 @@ export function DrillView(state, id, rerender) {
           store.completeDrill(d.id, reflection);
           if (first) celebrate('Drill shot', { iconName: 'target' });
           else toast('Saved');
-          location.hash = '#/practice';
+          nav.go('#/practice', { replace: true });
         } }, record?.completed ? 'Save and close' : 'Mark as shot'),
         h('a.btn', { href: `#/journal/new?drill=${d.id}`, style: { flex: 'none' } }, icon('plus', 16), 'Journal'))),
 

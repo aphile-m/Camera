@@ -10,6 +10,8 @@ import * as store from './core/store.js';
 import * as P from './core/photo.js';
 import * as sp from './core/sharepoint.js';
 import * as sync from './core/sync.js';
+import * as router from './core/nav.js';
+import { nativePlugin } from './core/native.js';
 
 import { HomeView } from './views/home.js';
 import { LearnView, LessonView } from './views/learn.js';
@@ -44,11 +46,7 @@ function pageTitle(route) {
 
 /* ---------- Router --------------------------------------------------------- */
 
-function parseRoute() {
-  const raw = (location.hash || '#/').slice(2).split('?')[0];
-  const [section, ...rest] = raw.split('/').filter(Boolean);
-  return { section: section || '', param: rest[0] || null, rest };
-}
+const { parseRoute } = router;
 
 function renderRoute(state, route, rerender) {
   const { section, param } = route;
@@ -198,7 +196,7 @@ async function boot() {
   }
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(store.get().profile.theme || 'auto'));
 
-  if (!location.hash) location.hash = '#/';
+  router.init();
 
   const { node, rerender } = Shell();
   /* Keep the splash: replaceChildren would take it with everything else, and
@@ -212,6 +210,16 @@ async function boot() {
   if (authMessage) { toast(authMessage); rerender(); }
   /* Let the launch animation finish before asking anything. */
   if (!state.onboarded) setTimeout(() => onboard(rerender), reducedMotion() ? 0 : 1500);
+
+  /* Android's hardware back. Nothing in the Capacitor runtime handles it, so
+     without this the button quits the app from wherever you happen to be —
+     three taps into a lesson, back should return to the lesson list, not the
+     home screen. Taking the listener means taking responsibility for the exit
+     too, which is what the false return is for. */
+  const nativeApp = nativePlugin('App');
+  nativeApp?.addListener('backButton', () => {
+    if (!router.back()) nativeApp.exitApp();
+  });
 
   /* Anything queued while offline goes up now, and progress reconciles with
      whatever the other device did. */

@@ -81,6 +81,39 @@ twice once Capacitor's template and ours are both present.
 Verified under circle, squircle, rounded-square and square launcher masks at
 104px and 48px.
 
+## Plugins, and reaching them from a remote page
+
+The shell carries two Capacitor plugins:
+
+| Plugin | Why |
+|---|---|
+| `@capacitor/app` | the hardware back button — nothing in the Capacitor runtime handles it, so without this plugin back quits the app from any screen |
+| `@capacitor/geolocation` | the sun and blue-hour tools; the overlay script injects `ACCESS_COARSE_LOCATION` and `ACCESS_FINE_LOCATION`, which the plugin does not declare itself |
+
+Reaching them takes one extra step here. `Capacitor.Plugins` is a plain object
+that `registerPlugin()` fills in, and `registerPlugin()` normally runs because
+the bundle imports `@capacitor/app`. This app has no bundler and is served over
+the network, so nothing ever imports anything — and reading
+`Capacitor.Plugins.App` finds nothing however plainly the plugin is installed.
+
+`js/core/native.js` registers by name instead, against the `PluginHeaders` the
+native bridge injects, which lists exactly what the APK carries. Anything not
+in that list returns `null` and the web fallback runs.
+
+## Back
+
+`js/core/nav.js` owns what back means, once, for the hardware button and the
+browser alike:
+
+1. an open sheet closes,
+2. otherwise history we pushed ourselves is popped,
+3. otherwise it climbs a level — a lesson opened from a link goes to the path,
+   not to nothing,
+4. only at Today with nothing behind it does the app exit.
+
+Screens you should not land back on — a submitted form, a deleted entry, a
+finished drill — replace their history entry rather than pushing one.
+
 ## Microsoft sign-in
 
 `allowNavigation` in `capacitor.config.json` whitelists the Entra and Graph
