@@ -20,7 +20,9 @@ const P = {
   bad:      '<circle cx="12" cy="12" r="9"/><path d="m9 9 6 6M15 9l-6 6"/>',
   good:     '<circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.5 2.5L16 9.5"/>',
   plus:     '<path d="M12 5v14M5 12h14"/>',
-  settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2.5v2M12 19.5v2M4.2 7.2l1.7 1M18.1 15.8l1.7 1M4.2 16.8l1.7-1M18.1 8.2l1.7-1"/>',
+  /* An actual cog. The previous one was a circle with six detached ticks —
+     which is a sun, and sat one line below the real sun icon. */
+  settings: '<path d="M9.23 5.79L9.19 2.82L14.81 2.82L14.77 5.79A6.8 6.8 0 0 1 16.00 6.50L16.00 6.50L18.55 4.98L21.35 9.84L18.76 11.29A6.8 6.8 0 0 1 18.76 12.71L18.76 12.71L21.35 14.16L18.55 19.02L16.00 17.50A6.8 6.8 0 0 1 14.77 18.21L14.77 18.21L14.81 21.18L9.19 21.18L9.23 18.21A6.8 6.8 0 0 1 8.00 17.50L8.00 17.50L5.45 19.02L2.65 14.16L5.24 12.71A6.8 6.8 0 0 1 5.24 11.29L5.24 11.29L2.65 9.84L5.45 4.98L8.00 6.50A6.8 6.8 0 0 1 9.23 5.79Z"/><circle cx="12" cy="12" r="3.1"/>',
   star:     '<path d="m12 4 2.4 5.2 5.6.7-4.1 3.9 1.1 5.6L12 16.7 6.9 19.4 8 13.8 3.9 9.9l5.6-.7z"/>',
   target:   '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4"/>',
   layers:   '<path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/>',
