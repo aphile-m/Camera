@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Overwrites Capacitor's default (#FFFFFF). Defined in its own file, as the
-     template does, so it replaces rather than duplicates the resource. -->
+<!-- Amber, not the app's near-black. A dark icon ground disappears into a dark
+     home screen — the Trainer App hit exactly this and had to force a light
+     one. Inverting keeps the brand colour and reads on any wallpaper. -->
 <resources>
-    <color name="ic_launcher_background">#100F0D</color>
+    <color name="ic_launcher_background">#E6B25A</color>
 </resources>

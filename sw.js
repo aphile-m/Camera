@@ -1,6 +1,6 @@
 /* Offline shell. Cache-first for the app's own files, so a shoot in a field
    with no signal works exactly like one at home. */
-const VERSION = 'stops-v4';
+const VERSION = 'stops-v5';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/app.js',

@@ -93,10 +93,19 @@ function Shell() {
     titleEl,
     h('a.btn.btn-ghost.btn-sm', { href: '#/settings', 'aria-label': 'Settings' }, icon('settings', 19)));
 
+  let lastRouteKey = null;
+
   const rerender = () => {
     const state = store.get();
     const route = parseRoute();
     const section = route.section;
+    /* A background sync re-renders this view in place. Only a real navigation
+       should move the page — otherwise scrolling Settings gets yanked back to
+       the top every time a sync lands. */
+    const routeKey = `${section}/${route.param || ''}`;
+    const navigated = routeKey !== lastRouteKey;
+    lastRouteKey = routeKey;
+    const keepScroll = navigated ? 0 : window.scrollY;
 
     /* Highlight the nav item, including for nested routes */
     const activeHref = section === 'lesson' ? '#/learn'
@@ -115,8 +124,12 @@ function Shell() {
 
     main.className = ['tools', 'journal'].includes(section) ? 'wide' : '';
     transition(() => mount(main, renderRoute(state, route, rerender)));
-    main.scrollTop = 0;
-    if (!location.hash.includes('?')) window.scrollTo({ top: 0, behavior: 'instant' });
+    if (navigated) {
+      main.scrollTop = 0;
+      if (!location.hash.includes('?')) window.scrollTo({ top: 0, behavior: 'instant' });
+    } else if (keepScroll) {
+      window.scrollTo({ top: keepScroll, behavior: 'instant' });
+    }
     store.update(s => { s.lastRoute = location.hash; });
   };
 
@@ -128,7 +141,12 @@ function Shell() {
   window.addEventListener('stops:sync', () => {
     const { section, param } = parseRoute();
     const isForm = section === 'journal' && param;
-    if (!isForm && (section === 'journal' || section === 'settings')) rerender();
+    /* Never redraw under someone's fingers: a focused field, or an open
+       disclosure, means they are in the middle of something. */
+    const busy = main.contains(document.activeElement)
+      || main.querySelector('details[open]') !== null;
+    if (busy || isForm) return;
+    if (section === 'journal' || section === 'settings') rerender();
   });
 
   return { node: h('div', { id: 'app' }, topbar, main, nav), rerender };
