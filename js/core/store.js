@@ -56,8 +56,19 @@ function load() {
   }
 }
 
+const LEGACY_LENS_IDS = ['kit', 'tele', 'prime'];
+
 function migrate(s) {
   s.gear = { ...structuredClone(DEFAULT_GEAR), ...(s.gear || {}) };
+
+  /* The app shipped with a placeholder kit that included a 35mm f/1.8 nobody
+     owns. If the stored lenses are still exactly that set, replace them — the
+     advisor was giving advice for glass that does not exist. Anything the user
+     has since added or edited is left untouched. */
+  const ids = (s.gear.lenses || []).map(l => l.id).sort();
+  if (ids.length === 3 && ids.every((id, i) => id === [...LEGACY_LENS_IDS].sort()[i])) {
+    s.gear.lenses = structuredClone(DEFAULT_GEAR.lenses);
+  }
   s.profile = { ...BLANK.profile, ...(s.profile || {}) };
   for (const k of ['lessons', 'drills', 'reviews', 'activity']) s[k] ||= {};
   s.journal ||= [];

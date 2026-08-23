@@ -1,8 +1,34 @@
+/* Some cards are computed from the user's actual gear, so the reference can
+   never drift from what the advisor works out. Those declare `rows` as a
+   function of the gear rather than a fixed array. */
+import { handheldLimit, nearestShutter, fmtShutter, fmtAperture, fmtDistance, SENSORS } from '../core/photo.js';
+
 /* ==========================================================================
    reference.js — the cards you check in the field, not the ones you study.
    ========================================================================== */
 
 export const REFERENCE = [
+  {
+    id:'your-kit', title:'Your kit, honestly', icon:'◎',
+    intro:'Two AF-P DX zooms on a D5300. What each is for, and where the kit runs out — knowing the second is worth more than knowing the first.',
+    rows: gear => [
+      ...gear.lenses.map(l => [
+        l.label,
+        `${l.min === l.max ? `${l.min}mm` : `${l.min}–${l.max}mm`}, ${fmtAperture(l.wideAperture)}`
+        + `${l.wideAperture !== l.longAperture ? `–${fmtAperture(l.longAperture)}` : ''}`
+        + `${l.minFocus ? `. Focuses to ${fmtDistance(l.minFocus)}` : ''}`
+        + `${l.filter ? `, ${l.filter}mm filter` : ''}`
+        + `${l.stabilised ? '. VR.' : '. No VR.'}`,
+      ]),
+      ['The gap', 'Nothing between 55mm and 70mm. In practice you swap lenses rather than zoom through it, so decide which one is on the camera before you leave.'],
+      ['No VR on the 70–300', 'The single most important fact about this kit. At 300mm you need about 1/900s handheld. Rest it on a wall, a bag or a car roof — that buys more than any setting.'],
+      ['Nothing faster than f/3.5', 'Indoors and after dark you buy exposure with ISO, not aperture. ISO 3200 is normal, not a failure. Blur is the mistake you cannot fix; noise is not.'],
+      ['Blur without fast glass', 'Length and distance, not aperture. 300mm, subject close to you, background far behind them, beats f/1.8 at 35mm for separation.'],
+      ['AF-P means no switches', 'VR and manual focus live in the camera menu, not on the barrel. Shooting menu → Optical VR, and the focus-mode control on the body.'],
+      ['AF-P quirk', 'Focus does not hold when the camera sleeps or powers off. After a nap, refocus before you trust it — especially if you set focus manually for stars.'],
+      ['Firmware', 'The D5300 needs firmware C 1.02 or later to drive AF-P lenses at all. If either lens misbehaves, check that first.'],
+    ],
+  },
   {
     id:'first-five', title:'The first five seconds', icon:'◈',
     intro:'Before every frame, in this order. It takes a second and it saves more photographs than any accessory.',
@@ -23,6 +49,32 @@ export const REFERENCE = [
       ['ISO',      '100 · 200 · 400 · 800 · 1600 · 3200 · 6400 · 12800'],
       ['Trade',    'Two stops given to one control, two taken from another: same brightness, different photograph.'],
     ],
+  },
+  {
+    id:'handheld-floors', title:'Your handheld floors', icon:'⌇',
+    intro:'The slowest shutter each lens will forgive at each end, worked out for your body and whether that lens has VR. Below these, brace against something or put it down.',
+    rows: gear => {
+      const crop = (SENSORS[gear.sensor] || SENSORS.apsc).crop;
+      const out = [];
+      for (const l of gear.lenses) {
+        /* Round mid-points to something you would actually set on the barrel. */
+        const mid = [24, 35, 50, 105, 135, 150, 200]
+          .filter(f => f > l.min && f < l.max)
+          .sort((a, b) => Math.abs(a - (l.min + l.max) / 2) - Math.abs(b - (l.min + l.max) / 2))[0];
+        const points = l.min === l.max ? [l.min] : [l.min, mid, l.max].filter(Boolean);
+        for (const f of points) {
+          out.push([
+            `${f}mm · ${l.label.split(' ')[0]}`,
+            /* Snap to a speed the camera actually offers, not a raw fraction. */
+            `${fmtShutter(nearestShutter(handheldLimit(f, { crop, stabilised: l.stabilised })))}`
+            + (l.stabilised ? ' — VR is doing the work' : ' — no VR'),
+          ]);
+        }
+      }
+      out.push(['Anything moving',
+        'These only stop your own shake. A walking person still needs 1/250 whatever the lens is doing.']);
+      return out;
+    },
   },
   {
     id:'shutter-guide', title:'Shutter speed by subject', icon:'⧗',

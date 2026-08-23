@@ -246,9 +246,9 @@ export const LESSONS = [
   mistakes:['Shooting everything wide open and wondering why half the frames are soft.','Expecting background blur with the subject pressed against a wall.'],
   drill:{
     id:'d2-aperture', title:'The aperture run', frames:6,
-    brief:'One subject, standing well clear of a background with detail in it. Shoot at every full stop your lens offers, from wide open to f/16, focusing on the same point each time.',
+    brief:'One subject, standing well clear of a background with detail in it. Shoot at every full stop your lens offers, from wide open to f/16, focusing on the same point each time. Then do it again at 55mm and once more at 300mm on the long lens — with no fast glass, focal length is the lever that actually moves the background.',
     constraints:['Same distance and focal length throughout','Background at least five metres behind the subject','Focus on the same point every frame'],
-    success:['You can see exactly where the background stops being recognisable','You can see the frame where the lens is at its sharpest'],
+    success:['You can see exactly where the background stops being recognisable','You can see the frame where the lens is at its sharpest','The 300mm frame separates the subject better than the widest aperture did'],
     reflect:['At which aperture did the background become an abstraction rather than a place?'],
   },
   quiz:[
@@ -890,6 +890,7 @@ export const LESSONS = [
   idea:'A good portrait is mostly a good interaction, plus three technical decisions: how far away you stand, where you focus, and where the light is. Get those right and equipment barely matters.',
   body:[
     { h:'Focal length changes the face', p:'A wide lens up close enlarges whatever is nearest — usually the nose — and it is unflattering. Step back and use 50 to 105mm equivalent, and facial proportions render naturally. On a crop body, roughly 35 to 70mm. The lens does not distort the face; the short distance does.' },
+    { h:'With this kit', p:'55mm on the kit zoom is the natural portrait length, and 70mm on the long lens is better still if you have room to step back. Neither opens past f/4.5, so the background will not melt on aperture alone — separate the subject by distance instead: them close to you, the background far behind them.' },
     { h:'Focus on the near eye', p:'Every time. At f/1.8 the depth of field at portrait distance can be under five centimetres — sharp eyelashes and a soft ear. If both eyes cannot be sharp, the near one must be.' },
     { h:'Light on the face', p:'Turn your subject until the light shapes the face rather than flattening it — the classic positions put a small triangle of light on the shadowed cheek. Open shade with a bright opening in front of them is the easiest good portrait light there is.' },
     { h:'Eye level, or lower', p:'Shooting down at an adult diminishes them; shooting up gives them presence. Photograph children from their own eye level and the pictures stop looking like surveillance.' },

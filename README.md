@@ -178,6 +178,20 @@ android-signing/        committed debug keystore, for stable sideload signatures
 No dependencies, no bundler, no transpiler. ES modules loaded directly by the
 browser. About 5,000 lines, of which the largest single part is the writing.
 
+### The kit it is tuned for
+
+The defaults are a Nikon D5300 with two AF-P DX zooms: an 18–55mm f/3.5–5.6 VR
+and a 70–300mm f/4.5–6.3 ED with **no VR**. That last detail drives more advice
+than anything else — at 300mm the handheld floor is about 1/1000s, and the
+advisor says so rather than quietly recommending a speed you cannot hold.
+
+With nothing faster than f/3.5, the app also stops pretending aperture is the
+route to a soft background and points at focal length and distance instead. Two
+reference cards are computed from the gear rather than written down, so the
+handheld floors can never drift from what the advisor works out.
+
+Change the lenses in Settings and every calculation follows.
+
 ### The engine
 
 `js/core/photo.js` is the interesting part, and it is deliberately free of DOM so

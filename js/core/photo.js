@@ -171,10 +171,23 @@ export const DEFAULT_GEAR = {
   isoCeiling: 6400,     // highest ISO you are happy to print
   maxShutter: 1/4000,   // fastest the body offers
   flashSync: 1/200,     // fastest shutter that syncs with flash
+  /* The actual kit. Both are AF-P, which focus fast and near-silently but put
+     VR and focus mode in the camera menu rather than on a switch. */
   lenses: [
-    { id:'kit',  label:'18–55mm kit',  min:18, max:55,  wideAperture:3.5, longAperture:5.6, stabilised:true },
-    { id:'tele', label:'55–200mm',     min:55, max:200, wideAperture:4,   longAperture:5.6, stabilised:true },
-    { id:'prime',label:'35mm f/1.8',   min:35, max:35,  wideAperture:1.8, longAperture:1.8, stabilised:false },
+    {
+      id: 'kit18', label: '18–55mm f/3.5–5.6 VR',
+      min: 18, max: 55, wideAperture: 3.5, longAperture: 5.6,
+      stabilised: true, minFocus: 0.25, filter: 55, mount: 'AF-P DX',
+      note: 'VR and manual focus are switched in the camera menu — the lens has no switches of its own.',
+    },
+    {
+      id: 'tele70', label: '70–300mm f/4.5–6.3 ED',
+      min: 70, max: 300, wideAperture: 4.5, longAperture: 6.3,
+      /* No VR on this variant. It matters more than anything else about it:
+         at 300mm the handheld floor is around 1/900s. */
+      stabilised: false, minFocus: 1.1, filter: 58, mount: 'AF-P DX',
+      note: 'No VR. At 300mm that means roughly 1/900s handheld, so it needs real light or something to rest on.',
+    },
   ],
 };
 
@@ -511,6 +524,8 @@ export function advise({
   const error = exposureError(ev, N, t, iso) - (nd?.mode === 'required' ? nd.stops : 0);
 
   /* ---- 4. The honest warnings ------------------------------------------ */
+  /* Declared here because several of the notes below reason about it. */
+  const subjectDistance = it.id === 'isolate' ? 2 : it.id === 'sharp_all' ? 8 : 3;
   if (nd && nd.stops > 0.5) {
     const filter = ND_FILTERS.reduce((a, b) => Math.abs(b.stops - nd.stops) < Math.abs(a.stops - nd.stops) ? b : a);
     notes.push(nd.mode === 'required'
@@ -531,7 +546,14 @@ export function advise({
   if (it.id === 'lowlight')
     notes.push({ tone:'info', text:`In fast-moving low light, set A mode at ${fmtAperture(N)}, turn on Auto ISO with a minimum shutter of ${fmtShutter(handheld)} and a ceiling of ${fmtISO(gear.isoCeiling)}, and stop thinking about the numbers.` });
 
-  const subjectDistance = it.id === 'isolate' ? 2 : it.id === 'sharp_all' ? 8 : 3;
+  /* Kit-specific truths, which matter more than any general rule. */
+  if (lens && lens.stabilised === false && !tripod && focal >= 150)
+    notes.push({ tone:'warn', text:`This lens has no VR, so at ${focal}mm you need ${fmtShutter(handheld)} or faster handheld. Brace it on a wall, a bag or a car roof — that buys more than any setting will.` });
+  if (lens?.minFocus && subjectDistance < lens.minFocus)
+    notes.push({ tone:'warn', text:`This lens will not focus closer than ${fmtDistance(lens.minFocus)}. Step back, or use the other lens.` });
+  if (it.id === 'isolate' && wideOpen >= 3.5)
+    notes.push({ tone:'info', text:`Nothing in your kit opens past ${fmtAperture(wideOpen)}, so aperture alone will not melt a background. Length and distance will: go long, get close to the subject, and put the background far behind them.` });
+
   return {
     aperture: N, shutter: t, iso, ev, error, nd,
     handheldLimit: handheld, wantedShutter: wantedT,

@@ -596,7 +596,9 @@ export function ReferenceView(state, rerender) {
           h('span', { style: { color: 'var(--faint)', transform: open ? 'rotate(90deg)' : '', transition: 'transform .2s' } }, icon('chevron', 15))),
         open ? h('div', { style: { padding: '0 17px 17px' } },
           h('p', { class: 'small', style: { marginBottom: '13px' } }, card.intro),
-          h('div.kv', {}, ...card.rows.map(([k, v]) =>
+          /* A card may compute its rows from the gear, so the reference and the
+             advisor can never disagree about the same number. */
+          h('div.kv', {}, ...(typeof card.rows === 'function' ? card.rows(state.gear) : card.rows).map(([k, v]) =>
             h('div', { style: { gridTemplateColumns: 'minmax(96px, 38%) 1fr' } },
               h('div.k', { style: { textTransform: 'none', letterSpacing: '0', fontFamily: 'var(--mono)', fontSize: '12px', color: 'var(--accent)' } }, k),
               h('div.v', {}, v))))) : null);
