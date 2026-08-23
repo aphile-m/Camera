@@ -83,16 +83,20 @@ jobs:
             | grep -m1 'SHA256:' | tr -d ' ' | cut -d: -f2-)
           echo "EXPECTED_SHA=$EXPECTED" >> "$GITHUB_ENV"
 
-      - name: Build debug APK
+      - name: Build release APK
+        # Release, not debug: a debuggable APK is what Play Protect and most
+        # corporate device policies refuse to install, and it is a megabyte
+        # larger for no benefit. Signed with the same stable key, so it still
+        # installs over any previous build.
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
       - name: Fail the build if the APK is not signed with the stable key
         run: |
           set -euo pipefail
-          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          APK=android/app/build/outputs/apk/release/app-release.apk
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           ACTUAL=$("$BT/apksigner" verify --print-certs "$APK" \
             | grep -m1 -i 'SHA-256 digest' | awk '{print toupper($NF)}')
@@ -105,12 +109,23 @@ jobs:
           }
           echo "signed with the stable key — this build installs over the previous one"
 
+      - name: Refuse to publish a debuggable APK
+        run: |
+          set -euo pipefail
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          if "$BT/aapt2" dump xmltree --file AndroidManifest.xml \
+               android/app/build/outputs/apk/release/app-release.apk | grep -qi 'debuggable'; then
+            echo "::error::APK is debuggable — Play Protect and managed devices will refuse to install it."
+            exit 1
+          fi
+          echo "not debuggable" 
+
       - name: Publish release
         env:
           NOTES: ${{ inputs.notes }}
         run: |
           set -euo pipefail
           TAG="android-v${{ github.run_number }}"
-          cp android/app/build/outputs/apk/debug/app-debug.apk Stops.apk
+          cp android/app/build/outputs/apk/release/app-release.apk Stops.apk
           gh release create "$TAG" --title "Stops $TAG" --notes "$NOTES" --latest Stops.apk
           echo "APK: https://github.com/${{ github.repository }}/releases/latest/download/Stops.apk" >> "$GITHUB_STEP_SUMMARY"
