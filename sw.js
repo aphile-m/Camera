@@ -1,6 +1,6 @@
 /* Offline shell. Cache-first for the app's own files, so a shoot in a field
    with no signal works exactly like one at home. */
-const VERSION = 'stops-v3';
+const VERSION = 'stops-v4';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './js/app.js',
@@ -9,7 +9,8 @@ const ASSETS = [
   './js/ui/dom.js', './js/ui/icons.js', './js/ui/diagrams.js', './js/ui/parts.js',
   './js/views/home.js', './js/views/learn.js', './js/views/practice.js',
   './js/views/tools.js', './js/views/journal.js', './js/views/settings.js',
-  './assets/icon.svg',
+  './assets/icon.svg', './assets/light-texture.webp',
+  './js/ui/motion.js', './js/core/geo.js',
 ];
 
 self.addEventListener('install', e => {

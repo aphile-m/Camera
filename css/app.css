@@ -518,3 +518,221 @@ input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* ==========================================================================
+   Motion, personality and the launch sequence.
+   The base design is deliberately quiet; this layer gives it a pulse without
+   turning it into a toy. Everything here collapses under prefers-reduced-motion.
+   ========================================================================== */
+
+:root {
+  --t-1: 130ms;   /* a press, a tap target reacting */
+  --t-2: 260ms;   /* something appearing */
+  --t-3: 460ms;   /* something arriving with weight */
+  --t-4: 900ms;   /* a celebration */
+  --spring: cubic-bezier(.34, 1.4, .5, 1);
+  --swift:  cubic-bezier(.2, .9, .3, 1);
+
+  /* Each level gets its own hue, so the path reads as a journey rather than a
+     list. Used for spines, rings and level headers. */
+  --lv-1: #E6B25A;   /* Seeing        — amber */
+  --lv-2: #E08A4C;   /* Exposure      — ember */
+  --lv-3: #6CC0D4;   /* Sharpness     — cyan */
+  --lv-4: #F0C86B;   /* Light         — gold */
+  --lv-5: #B09AD8;   /* Composition   — violet */
+  --lv-6: #E0798C;   /* Subjects      — rose */
+  --lv-7: #7FC48F;   /* After         — green */
+}
+:root[data-theme="light"], :root:not([data-theme="dark"]) {
+  --lv-1: #9A6A12; --lv-2: #A65420; --lv-3: #1F6B80; --lv-4: #8A6A15;
+  --lv-5: #6B4C8F; --lv-6: #A33E55; --lv-7: #33704A;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --lv-1:#E6B25A; --lv-2:#E08A4C; --lv-3:#6CC0D4; --lv-4:#F0C86B;
+    --lv-5:#B09AD8; --lv-6:#E0798C; --lv-7:#7FC48F;
+  }
+}
+:root[data-theme="dark"] {
+  --lv-1:#E6B25A; --lv-2:#E08A4C; --lv-3:#6CC0D4; --lv-4:#F0C86B;
+  --lv-5:#B09AD8; --lv-6:#E0798C; --lv-7:#7FC48F;
+}
+
+/* ---------- Launch splash --------------------------------------------------- */
+/*  Markup lives in index.html so it paints before any JavaScript parses —
+    otherwise the first frame is a white flash on a dark app.                  */
+
+#splash {
+  position: fixed; inset: 0; z-index: 999;
+  display: grid; place-items: center;
+  background: radial-gradient(120% 90% at 50% 40%, #17140f 0%, #0b0a09 70%);
+  transition: opacity var(--t-3) var(--swift), transform var(--t-3) var(--swift);
+}
+#splash.done { opacity: 0; transform: scale(1.06); pointer-events: none; }
+#splash .wrap { display: grid; place-items: center; gap: 22px; }
+#splash svg { width: 108px; height: 108px; overflow: visible; }
+#splash .blade {
+  transform-origin: 0 0;
+  animation: blade-open 1s var(--spring) both;
+  animation-delay: calc(var(--i) * 55ms);
+}
+#splash .barrel {
+  animation: barrel-in .7s var(--swift) both;
+  transform-origin: 0 0;
+}
+#splash .word {
+  font-family: var(--serif); font-size: 26px; letter-spacing: .02em;
+  color: #F4EFE6; opacity: 0; animation: fade-up .6s var(--swift) .55s both;
+}
+#splash .tag {
+  font: 500 11px/1 var(--sans); letter-spacing: .22em; text-transform: uppercase;
+  color: #8d8272; opacity: 0; animation: fade-up .6s var(--swift) .72s both;
+}
+
+@keyframes blade-open {
+  from { transform: rotate(-34deg) scale(.55); opacity: 0 }
+  to   { transform: rotate(0) scale(1); opacity: 1 }
+}
+@keyframes barrel-in {
+  from { transform: scale(.4); opacity: 0 }
+  to   { transform: scale(1); opacity: 1 }
+}
+
+/* ---------- Arrival --------------------------------------------------------- */
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(9px) } to { opacity: 1; transform: none } }
+@keyframes fade-in { from { opacity: 0 } }
+@keyframes pop-in  { from { opacity: 0; transform: scale(.94) } }
+@keyframes sweep   { from { transform: translateX(-100%) } to { transform: translateX(100%) } }
+
+/* Views arrive rather than blink into place. */
+main > * { animation: fade-up var(--t-3) var(--swift) both; }
+
+/* Direct children of a view stagger, so a screen assembles itself. */
+.stack-lg > * { animation: fade-up var(--t-2) var(--swift) both; }
+.stack-lg > *:nth-child(1) { animation-delay: 0ms }
+.stack-lg > *:nth-child(2) { animation-delay: 45ms }
+.stack-lg > *:nth-child(3) { animation-delay: 90ms }
+.stack-lg > *:nth-child(4) { animation-delay: 135ms }
+.stack-lg > *:nth-child(5) { animation-delay: 180ms }
+.stack-lg > *:nth-child(n+6) { animation-delay: 215ms }
+
+/* ---------- Surfaces with a little depth ------------------------------------ */
+
+.card {
+  position: relative;
+  transition: border-color var(--t-2) var(--swift), transform var(--t-2) var(--spring);
+}
+/* A hairline of level colour along the top of a feature card. */
+.card.accent::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 2px;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: linear-gradient(90deg, var(--tone, var(--accent)), transparent 78%);
+}
+
+.btn:active { transform: scale(.97); }
+.btn-primary { box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 40%, transparent), var(--shadow-1); }
+.btn-primary:active { box-shadow: none; }
+
+.opt, .chip { transition: transform var(--t-1) var(--spring), background var(--t-2), border-color var(--t-2); }
+.opt:active, .chip:active { transform: scale(.97); }
+.opt[aria-pressed="true"] { animation: pop-in var(--t-2) var(--spring); }
+
+.lesson-row { transition: background var(--t-1), padding-left var(--t-2) var(--swift); }
+.lesson-row:active { background: var(--surface-2); }
+/* A spine of the level's colour, so scanning the path shows where you are. */
+.lesson-row { border-left: 2px solid transparent; }
+.lesson-row.done { border-left-color: var(--tone, var(--accent)); }
+
+/* ---------- Progress with movement ------------------------------------------ */
+
+.bar > i { position: relative; overflow: hidden; }
+.bar > i::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+  animation: sweep 2.4s var(--swift) 1.2s;
+}
+.ring { transition: --p var(--t-4) var(--swift); }
+@property --p { syntax: '<number>'; inherits: false; initial-value: 0; }
+
+.num-roll { font-variant-numeric: tabular-nums; }
+
+/* The streak flame breathes when it is alive. */
+@keyframes ember { 0%,100% { opacity: .9; transform: none } 50% { opacity: 1; transform: translateY(-1px) scale(1.06) } }
+.flame-live svg { animation: ember 2.6s ease-in-out infinite; }
+
+/* ---------- Level headers ---------------------------------------------------- */
+
+/* One generated light texture behind every level header. Each level takes a
+   different crop of it and tints it with its own colour, so seven headers come
+   out of one 40KB image rather than seven downloads. */
+.level-head {
+  position: relative; overflow: hidden;
+  border-radius: var(--r-lg); border: 1px solid var(--line);
+  padding: 18px 18px 16px;
+  background: var(--surface);
+  isolation: isolate;
+}
+.level-head::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  /* Declared here, not passed in from JS: a url() inside a custom property
+     resolves against the stylesheet that uses it, so a document-relative path
+     set inline resolves to /css/assets/… and 404s. This one is relative to
+     this file and therefore correct at any base path, subdirectory included. */
+  background-image:
+    linear-gradient(105deg, color-mix(in srgb, var(--tone) 62%, transparent) 0%, transparent 66%),
+    url('../assets/light-texture.webp');
+  background-size: cover;
+  background-position: var(--tex-pos, 50% 50%);
+  background-blend-mode: overlay;
+  opacity: .5;
+}
+:root[data-theme="light"] .level-head::before,
+:root:not([data-theme="dark"]) .level-head::before { opacity: .3; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .level-head::before { opacity: .5; }
+}
+.level-head > * { position: relative; z-index: 1; }
+/* A slice of lens barrel, echoing the app mark. */
+.level-head::after {
+  content: ''; position: absolute; right: -30px; top: -38px; z-index: 0;
+  width: 140px; height: 140px; border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--tone) 50%, transparent);
+  box-shadow: inset 0 0 0 14px color-mix(in srgb, var(--tone) 14%, transparent);
+}
+.level-head .n {
+  font: 600 10.5px/1 var(--sans); letter-spacing: .18em; text-transform: uppercase;
+  color: var(--tone);
+}
+
+/* ---------- Celebration ------------------------------------------------------ */
+
+#celebrate {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center;
+  pointer-events: none; background: rgba(10,9,8,.28);
+  animation: fade-in var(--t-2) both;
+}
+#celebrate.out { animation: fade-in var(--t-2) reverse both; }
+#celebrate .burst { position: relative; display: grid; place-items: center; }
+#celebrate .ring-pulse {
+  position: absolute; width: 90px; height: 90px; border-radius: 50%;
+  border: 2px solid var(--accent);
+  animation: pulse-out 900ms var(--swift) both;
+}
+#celebrate .ring-pulse:nth-child(2) { animation-delay: 130ms }
+#celebrate .ring-pulse:nth-child(3) { animation-delay: 260ms }
+@keyframes pulse-out { from { transform: scale(.4); opacity: .9 } to { transform: scale(2.6); opacity: 0 } }
+#celebrate .msg {
+  position: relative; background: var(--surface); border: 1px solid var(--line);
+  border-radius: 999px; padding: 12px 22px; box-shadow: var(--shadow-3);
+  font: 600 15px/1 var(--sans); color: var(--ink);
+  animation: pop-in var(--t-3) var(--spring) both;
+  display: flex; align-items: center; gap: 10px;
+}
+#celebrate .msg svg { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  #splash .blade, #splash .barrel, #splash .word, #splash .tag,
+  main > *, .stack-lg > *, .bar > i::after, .flame-live svg,
+  #celebrate, #celebrate .msg, #celebrate .ring-pulse { animation: none !important; opacity: 1 !important; transform: none !important; }
+}

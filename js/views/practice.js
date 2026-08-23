@@ -7,6 +7,7 @@ import { icon } from '../ui/icons.js';
 import { Section, Card, Note, Bar, Bullets, Empty, Seg } from '../ui/parts.js';
 import * as store from '../core/store.js';
 import { LESSONS, LEVELS, DRILLS, drillById, lessonById, cardById } from '../data/curriculum.js';
+import { levelTone, celebrate } from '../ui/motion.js';
 
 /* ---------- Drill index --------------------------------------------------- */
 
@@ -44,7 +45,7 @@ export function PracticeView(state, rerender) {
         const lesson = lessonById(d.lessonId);
         const isDone = !!state.drills[d.id]?.completed;
         const locked = !state.lessons[d.lessonId]?.read;
-        return h('a.lesson-row', { class: isDone ? 'done' : '', href: `#/drill/${d.id}` },
+        return h('a.lesson-row', { class: isDone ? 'done' : '', href: `#/drill/${d.id}`, style: { '--tone': levelTone(d.level) } },
           h('span.idx', {}, isDone ? '✓' : locked ? '·' : String(d.level)),
           h('span.grow', {},
             h('span.t', { style: { display: 'block' } }, d.title),
@@ -98,8 +99,10 @@ export function DrillView(state, id, rerender) {
     Section(null,
       h('div.row', { style: { gap: '10px' } },
         h('button.btn.btn-primary', { style: { flex: '1' }, onClick: () => {
+          const first = !record?.completed;
           store.completeDrill(d.id, reflection);
-          toast('Drill logged — nice work');
+          if (first) celebrate('Drill shot', { iconName: 'target' });
+          else toast('Saved');
           location.hash = '#/practice';
         } }, record?.completed ? 'Save and close' : 'Mark as shot'),
         h('a.btn', { href: `#/journal/new?drill=${d.id}`, style: { flex: 'none' } }, icon('plus', 16), 'Journal'))),

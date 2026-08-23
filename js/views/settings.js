@@ -9,6 +9,7 @@ import * as store from '../core/store.js';
 import * as P from '../core/photo.js';
 import * as sp from '../core/sharepoint.js';
 import * as sync from '../core/sync.js';
+import { captureLocation } from '../core/geo.js';
 import { LESSONS, DRILLS } from '../data/curriculum.js';
 
 export function SettingsView(state, rerender) {
@@ -87,10 +88,10 @@ export function SettingsView(state, rerender) {
                 store.update(s => { s.location = { lat: state.__lat, lon: state.__lon, label: 'Manual' }; });
                 toast('Saved'); rerender();
               } }, 'Save'),
-              h('button.btn.btn-sm', { onClick: () => {
-                navigator.geolocation?.getCurrentPosition(
-                  pos => { store.update(s => { s.location = { lat: pos.coords.latitude, lon: pos.coords.longitude, label: 'This device' }; }); rerender(); },
-                  () => toast('Location unavailable'), { timeout: 8000 });
+              h('button.btn.btn-sm', { onClick: async e => {
+                const btn = e.currentTarget; btn.disabled = true;
+                try { await captureLocation(); rerender(); }
+                catch (err) { btn.disabled = false; toast(err.message); }
               } }, icon('compass', 15), 'Locate me'))))),
 
     SharePointSection(state, rerender),

@@ -200,9 +200,21 @@ f/3.5 · 13s · ISO 6400.
 
 ### Design
 
-An editorial darkroom: warm near-black or warm paper, a single amber accent,
-hairline rules, a serif for the writing and tabular mono for every number. Light
-and dark are equal citizens, both defined in tokens and both verified.
+An editorial darkroom: warm near-black or warm paper, a serif for the writing
+and tabular mono for every number. Light and dark are equal citizens, both
+defined in tokens and both verified.
+
+Each of the seven levels carries its own colour, through its header, the spine
+on a finished lesson and the accent on whatever the app suggests next — so the
+path reads as a journey rather than a list. One generated light texture sits
+behind the level headers, tinted and cropped differently per level, which is
+seven distinct headers for a single 4KB image.
+
+Launching plays an aperture opening — the same iris as the launcher icon, so
+the Android launch window, the web splash and the app mark are one thing.
+Views arrive rather than blink in, cards stagger, progress rings sweep and
+counts run up, and finishing a lesson, a drill or a whole level is marked. All
+of it collapses under `prefers-reduced-motion`.
 
 Everything passes WCAG AA contrast in both themes, every tap target is at least
 30 px, no page scrolls horizontally at 390 px, and the whole interface respects

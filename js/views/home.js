@@ -7,7 +7,9 @@ import { h, toast } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import { Section, Card, Note, Bar, Ring, Empty } from '../ui/parts.js';
 import * as store from '../core/store.js';
+import { captureLocation } from '../core/geo.js';
 import { LESSONS, LEVELS, lessonById, drillById, CARDS } from '../data/curriculum.js';
+import { levelTone, countUp } from '../ui/motion.js';
 import { sunTimes, lightNow, lightById, advise, fmtAperture, fmtShutter, fmtISO } from '../core/photo.js';
 import { fmtTime } from '../ui/dom.js';
 
@@ -42,9 +44,9 @@ function NextCard(state) {
   const l = step.lesson;
   const level = LEVELS.find(v => v.id === l.level);
   const isDrill = step.kind === 'drill';
-  return Card(
+  const card = Card(
     h('div.row-between', {},
-      h('div.eyebrow', {}, isDrill ? 'Unfinished drill' : `Level ${l.level} · ${level.name}`),
+      h('div.eyebrow', { style: { color: 'var(--tone)' } }, isDrill ? 'Unfinished drill' : `Level ${l.level} · ${level.name}`),
       h('div.tiny', {}, isDrill ? `${step.drill.frames || '—'} frames` : `${l.minutes} min`)),
     h('h2', { style: { margin: '9px 0 6px' } }, isDrill ? step.drill.title : l.title),
     h('p', { class: 'small' }, isDrill ? step.drill.brief : l.sub),
@@ -52,6 +54,9 @@ function NextCard(state) {
       href: isDrill ? `#/drill/${step.drill.id}` : `#/lesson/${l.id}`,
       style: { marginTop: '15px' },
     }, isDrill ? 'Open the drill' : 'Start the lesson'));
+  card.classList.add('accent');
+  card.style.setProperty('--tone', levelTone(l.level));
+  return card;
 }
 
 function ProgressCard(state) {
@@ -67,20 +72,28 @@ function ProgressCard(state) {
       return h('i', { 'data-v': String(v), title: `${d.date}: ${d.lessons} lessons, ${d.drills} drills` });
     }));
 
+  const ringLabel = h('span', { class: 'num-roll' }, '0');
+  const ring = h('div.ring', { style: { '--p': '0' } }, ringLabel);
+  /* Let the ring sweep and the count run once the card is on screen. */
+  requestAnimationFrame(() => {
+    ring.style.setProperty('--p', String(Math.round(pct)));
+    countUp(ringLabel, done);
+  });
+
   return Card(
     h('div.row', { style: { gap: '16px' } },
-      Ring(pct, `${done}`),
+      ring,
       h('div.grow', {},
         h('div', { style: { fontWeight: '600', fontSize: '15px' } }, `${done} of ${LESSONS.length} lessons`),
         h('div.tiny', { style: { marginTop: '2px' } }, `${drills} drills shot · ${streak} day streak${state.streak.best > streak ? ` · best ${state.streak.best}` : ''}`)),
-      streak > 0 ? h('div', { style: { color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '4px' } },
+      streak > 0 ? h('div', { class: 'flame-live', style: { color: 'var(--accent)', display: 'flex', alignItems: 'center', gap: '4px' } },
         icon('flame', 19), h('span', { class: 'num', style: { fontWeight: '600' } }, String(streak))) : null),
     h('div', { style: { marginTop: '15px' } }, Bar(pct)),
     h('div', { style: { marginTop: '15px', overflowX: 'auto' } }, heat),
     h('div.tiny', { style: { marginTop: '7px' } }, 'Last five weeks. A day counts when you read a lesson or shoot a drill.'));
 }
 
-function LightCard(state) {
+function LightCard(state, rerender) {
   const loc = state.location;
   if (!loc) {
     return Card(
@@ -88,16 +101,18 @@ function LightCard(state) {
       h('p', { class: 'small', style: { margin: '9px 0 13px' } },
         'Golden hour and blue hour move with the season and with where you are. Share your location once and this becomes a daily timetable — it is stored on this device and never sent anywhere.'),
       h('button.btn.btn-block', {
-        onClick: e => {
+        onClick: async e => {
           const btn = e.currentTarget;
+          const label = btn.textContent;
           btn.textContent = 'Locating…'; btn.disabled = true;
-          navigator.geolocation?.getCurrentPosition(
-            pos => {
-              store.update(s => { s.location = { lat: pos.coords.latitude, lon: pos.coords.longitude, label: 'This device' }; });
-              toast('Location saved');
-            },
-            () => { btn.textContent = 'Could not get location'; btn.disabled = false; toast('Location unavailable — you can set it in Settings'); },
-            { timeout: 8000 });
+          try {
+            await captureLocation();
+            toast('Location saved');
+            rerender();                       // the step the old copy forgot
+          } catch (err) {
+            btn.textContent = label; btn.disabled = false;
+            toast(err.message);
+          }
         },
       }, icon('compass', 17), 'Use my location'));
   }
@@ -168,7 +183,7 @@ function SuggestionCard(state) {
     h('a.btn.btn-sm.btn-ghost', { href: '#/tools/advisor', style: { marginTop: '12px' } }, 'Work it out properly'));
 }
 
-export function HomeView(state) {
+export function HomeView(state, rerender) {
   return h('div.stack-lg', { class: 'enter' },
     h('div', {},
       h('h1', { style: { marginTop: '6px' } }, GreetingLine(state)),
@@ -176,7 +191,7 @@ export function HomeView(state) {
         'Read one thing, then go and shoot it. The reading is the smaller half.')),
     NextCard(state),
     ReviewCard(state),
-    LightCard(state),
+    LightCard(state, rerender),
     SuggestionCard(state),
     ProgressCard(state));
 }

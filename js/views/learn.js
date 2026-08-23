@@ -7,6 +7,7 @@ import { icon } from '../ui/icons.js';
 import { Section, Card, Note, Bar, Figure, Prose, Bullets, KV, Empty } from '../ui/parts.js';
 import * as store from '../core/store.js';
 import { LESSONS, LEVELS, lessonById, lessonsInLevel } from '../data/curriculum.js';
+import { levelTone, celebrate } from '../ui/motion.js';
 
 /* ---------- The path ------------------------------------------------------ */
 
@@ -26,17 +27,26 @@ export function LearnView(state) {
       const levelDone = lessons.filter(l => state.lessons[l.id]?.read).length;
       const complete = levelDone === lessons.length;
 
-      return h('section', {},
-        h('div.row-between', { style: { marginBottom: '10px', alignItems: 'flex-end' } },
-          h('div', {},
-            h('div.eyebrow', {}, `Level ${level.id}`),
-            h('h2', { style: { marginTop: '4px' } }, level.name)),
-          h('div.tiny', { style: { flex: 'none' } },
-            complete ? '✓ complete' : `${levelDone}/${lessons.length}`)),
-        h('p', { class: 'small', style: { marginBottom: '12px' } }, level.blurb),
+      const tone = levelTone(level.id);
+      return h('section', { style: { '--tone': tone } },
+        h('div.level-head', { style: {
+          marginBottom: '10px',
+          /* Only the crop moves per level; the image itself is in the CSS. */
+          '--tex-pos': `${(level.id - 1) * 16}% ${level.id % 2 ? 30 : 70}%`,
+        } },
+          h('div.row-between', { style: { alignItems: 'flex-start' } },
+            h('div', { style: { position: 'relative', zIndex: '1' } },
+              h('div.n', {}, `Level ${level.id}`),
+              h('h2', { style: { marginTop: '5px' } }, level.name)),
+            h('div.tiny', { style: { flex: 'none', position: 'relative', zIndex: '1' } },
+              complete ? '✓ complete' : `${levelDone}/${lessons.length}`)),
+          h('p', { class: 'small', style: { marginTop: '8px', position: 'relative', zIndex: '1', maxWidth: '34ch' } },
+            level.blurb),
+          h('div', { style: { marginTop: '13px', position: 'relative', zIndex: '1' } },
+            Bar((levelDone / lessons.length) * 100))),
         h('div.card.flush', {}, ...lessons.map((l, i) => {
           const read = !!state.lessons[l.id]?.read;
-          return h('a.lesson-row', { class: read ? 'done' : '', href: `#/lesson/${l.id}` },
+          return h('a.lesson-row', { class: read ? 'done' : '', href: `#/lesson/${l.id}`, style: { '--tone': tone } },
             h('span.idx', {}, read ? '✓' : String(i + 1)),
             h('span.grow', {},
               h('span.t', { style: { display: 'block' } }, l.title),
@@ -57,16 +67,16 @@ export function LessonView(state, id, rerender) {
   const read = !!state.lessons[l.id]?.read;
   const level = LEVELS.find(v => v.id === l.level);
 
-  return h('div.stack-lg', { class: 'enter' },
+  return h('div.stack-lg', { class: 'enter', style: { '--tone': levelTone(l.level) } },
     h('div', {},
       h('a.btn.btn-ghost.btn-sm', { href: '#/learn', style: { marginLeft: '-8px' } }, icon('back', 16), 'The path'),
-      h('div.eyebrow', { style: { marginTop: '12px' } }, `Level ${l.level} · ${level.name} · ${l.minutes} min`),
+      h('div.eyebrow', { style: { marginTop: '12px', color: 'var(--tone)' } }, `Level ${l.level} · ${level.name} · ${l.minutes} min`),
       h('h1', { style: { margin: '8px 0 6px' } }, l.title),
       h('p', { class: 'lede' }, l.sub)),
 
     /* The core idea, given weight */
     h('div', { style: {
-      borderLeft: '2px solid var(--accent)', paddingLeft: '18px', margin: '4px 0',
+      borderLeft: '2px solid var(--tone)', paddingLeft: '18px', margin: '4px 0',
       fontFamily: 'var(--serif)', fontSize: '18px', lineHeight: '1.55', color: 'var(--ink)',
     } }, l.idea),
 
@@ -93,7 +103,15 @@ export function LessonView(state, id, rerender) {
 
     h('div.row', { style: { gap: '10px', marginTop: '30px' } },
       h('button.btn', { class: read ? '' : 'btn-primary', style: { flex: '1' },
-        onClick: () => { store.markLessonRead(l.id); toast(read ? 'Already marked as read' : 'Marked as read'); rerender(); } },
+        onClick: () => {
+          if (read) { toast('Already marked as read'); return; }
+          store.markLessonRead(l.id);
+          const peers = LESSONS.filter(x => x.level === l.level);
+          const doneNow = peers.filter(x => store.isLessonDone(x.id)).length;
+          if (doneNow === peers.length) celebrate(`Level ${l.level} complete — ${level.name}`, { iconName: 'star' });
+          else celebrate('Lesson read', { iconName: 'check' });
+          rerender();
+        } },
         read ? '✓ Read' : 'Mark as read'),
       next ? h('a.btn', { href: `#/lesson/${next.id}`, style: { flex: '1' } }, 'Next lesson', icon('chevron', 16)) : null));
 }

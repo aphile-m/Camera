@@ -7,6 +7,7 @@ import { h, toast, fmtTime, rawSVG } from '../ui/dom.js';
 import { icon } from '../ui/icons.js';
 import { Section, Card, Note, KV, OptGrid, Chips, Seg, Slider, Switch, Readout, Empty, Bullets } from '../ui/parts.js';
 import * as store from '../core/store.js';
+import { captureLocation } from '../core/geo.js';
 import * as P from '../core/photo.js';
 import { SCENES, SCENE_GROUPS, sceneById, TL_PRESETS } from '../data/scenes.js';
 import { REFERENCE } from '../data/reference.js';
@@ -395,12 +396,11 @@ export function LightView(state, rerender) {
         h('p', { class: 'small', style: { marginBottom: '14px' } },
           'Set a location and this becomes a daily timetable. It is stored on this device and never leaves it.'),
         h('button.btn.btn-primary.btn-block', {
-          onClick: e => {
-            e.currentTarget.textContent = 'Locating…';
-            navigator.geolocation?.getCurrentPosition(
-              pos => { store.update(st => { st.location = { lat: pos.coords.latitude, lon: pos.coords.longitude, label: 'This device' }; }); },
-              () => toast('Location unavailable — enter it manually in Settings'),
-              { timeout: 8000 });
+          onClick: async e => {
+            const btn = e.currentTarget;
+            btn.textContent = 'Locating…'; btn.disabled = true;
+            try { await captureLocation(); rerender(); }
+            catch (err) { btn.disabled = false; btn.textContent = 'Use my location'; toast(err.message); }
           },
         }, icon('compass', 17), 'Use my location'),
         h('a.btn.btn-block.btn-ghost', { href: '#/settings', style: { marginTop: '8px' } }, 'Enter it manually')));

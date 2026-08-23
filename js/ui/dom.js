@@ -19,7 +19,14 @@ export function h(tag, props = null, ...children) {
     if (k === 'class' || k === 'className') {
       el.setAttribute('class', [el.getAttribute('class'), v].filter(Boolean).join(' '));
     } else if (k === 'style' && typeof v === 'object') {
-      Object.assign(el.style, v);
+      /* Object.assign onto a CSSStyleDeclaration silently drops custom
+         properties — they only take through setProperty. Splitting them out
+         is the difference between --tone working and quietly doing nothing. */
+      for (const [prop, val] of Object.entries(v)) {
+        if (val === null || val === undefined || val === false) continue;
+        if (prop.startsWith('--')) el.style.setProperty(prop, String(val));
+        else el.style[prop] = val;
+      }
     } else if (k === 'html') {
       el.innerHTML = v;
     } else if (k.startsWith('on') && typeof v === 'function') {

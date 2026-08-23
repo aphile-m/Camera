@@ -26,6 +26,30 @@
 <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
+<!-- Painted before any script parses, so launching never flashes white on a
+     dark app. js/ui/motion.js dismisses it once the first view is mounted. -->
+<div id="splash" role="status" aria-label="Stops is starting">
+  <div class="wrap">
+    <svg viewBox="-200 -200 400 400" aria-hidden="true">
+      <g fill="none" stroke="#E6B25A" stroke-width="11">
+        <circle class="barrel" r="176"/>
+      </g>
+      <g fill="#E6B25A">
+        <path class="blade" style="--i:0" d="M8.42 -137.74A138 138 0 0 1 115.08 -76.17L59.08 -37.89L3.27 -70.11Z"/>
+        <path class="blade" style="--i:1" d="M123.50 -61.58A138 138 0 0 1 123.50 61.58L62.35 32.22L62.35 -32.22Z"/>
+        <path class="blade" style="--i:2" d="M115.08 76.17A138 138 0 0 1 8.42 137.74L3.27 70.11L59.08 37.89Z"/>
+        <path class="blade" style="--i:3" d="M-8.42 137.74A138 138 0 0 1 -115.08 76.17L-59.08 37.89L-3.27 70.11Z"/>
+        <path class="blade" style="--i:4" d="M-123.50 61.58A138 138 0 0 1 -123.50 -61.58L-62.35 -32.22L-62.35 32.22Z"/>
+        <path class="blade" style="--i:5" d="M-115.08 -76.17A138 138 0 0 1 -8.42 -137.74L-3.27 -70.11L-59.08 -37.89Z"/>
+      </g>
+    </svg>
+    <div style="text-align:center">
+      <div class="word">Stops</div>
+      <div class="tag" style="margin-top:8px">One stop at a time</div>
+    </div>
+  </div>
+</div>
+
 <noscript><p style="padding:24px;font:16px system-ui">Stops needs JavaScript. Everything runs in your browser — there is no server to fall back to.</p></noscript>
 <script type="module" src="js/app.js"></script>
 </body>

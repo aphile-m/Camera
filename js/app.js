@@ -5,6 +5,7 @@
 import { h, mount, $, toast, sheet } from './ui/dom.js';
 import { icon } from './ui/icons.js';
 import { Card, Note, Seg, Chips } from './ui/parts.js';
+import { dismissSplash, transition, reducedMotion } from './ui/motion.js';
 import * as store from './core/store.js';
 import * as P from './core/photo.js';
 import * as sp from './core/sharepoint.js';
@@ -52,7 +53,7 @@ function parseRoute() {
 function renderRoute(state, route, rerender) {
   const { section, param } = route;
   switch (section) {
-    case '':         return HomeView(state);
+    case '':         return HomeView(state, rerender);
     case 'learn':    return LearnView(state);
     case 'lesson':   return LessonView(state, param, rerender);
     case 'practice': return PracticeView(state, rerender);
@@ -113,7 +114,7 @@ function Shell() {
         pageTitle(route)));
 
     main.className = ['tools', 'journal'].includes(section) ? 'wide' : '';
-    mount(main, renderRoute(state, route, rerender));
+    transition(() => mount(main, renderRoute(state, route, rerender)));
     main.scrollTop = 0;
     if (!location.hash.includes('?')) window.scrollTo({ top: 0, behavior: 'instant' });
     store.update(s => { s.lastRoute = location.hash; });
@@ -182,12 +183,17 @@ async function boot() {
   if (!location.hash) location.hash = '#/';
 
   const { node, rerender } = Shell();
-  document.body.replaceChildren(node);
+  /* Keep the splash: replaceChildren would take it with everything else, and
+     the launch animation would never be seen. */
+  const splash = document.getElementById('splash');
+  document.body.replaceChildren(...(splash ? [splash] : []), node);
   rerender();
+  dismissSplash();
   store.touch('visit');
 
   if (authMessage) { toast(authMessage); rerender(); }
-  if (!state.onboarded) onboard(rerender);
+  /* Let the launch animation finish before asking anything. */
+  if (!state.onboarded) setTimeout(() => onboard(rerender), reducedMotion() ? 0 : 1500);
 
   /* Anything queued while offline goes up now, and progress reconciles with
      whatever the other device did. */
